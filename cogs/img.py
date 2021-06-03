@@ -1,0 +1,796 @@
+import discord
+import asyncio
+import json
+import aiohttp
+import datetime
+import random
+import io
+import requests
+import numpy as np
+import cv2 as cv
+from datetime import datetime
+from discord.ext import commands
+import PIL
+from PIL import Image, ImageFont, ImageDraw, ImageFilter
+from io import BytesIO
+
+
+class Images(commands.Cog):
+    """ Category for image commands """
+
+    def __init__(self, client):
+        self.client = client
+        
+
+    # events
+    @commands.Cog.listener()
+    async def on_ready(self):
+        print('Img cog is ready.')
+
+    # commands
+
+    @commands.command()
+    async def wanted(self, ctx, user : discord.Member = None):
+        if user == None:
+            user = ctx.author
+
+        wanted = Image.open("images/Wanted.jpeg")
+        
+        asset = user.avatar_url_as(size = 128)
+
+        data = BytesIO(await asset.read())
+
+        pfp = Image.open(data)
+        pfp = pfp.resize((106,106))
+
+        wanted.paste(pfp, (41,85))
+
+        wanted.save("images/profile.jpg")
+        await ctx.send(file = discord.File("images/profile.jpg"))
+
+    @commands.command()
+    async def rip(self, ctx, member:discord.Member=None):
+        if member == None:
+            member = ctx.author
+        rip = Image.open('images/RIP.jpg')
+
+        asset = member.avatar_url_as(size=128)
+
+        data = BytesIO(await asset.read())
+
+        pfp = Image.open(data)
+
+        pfp = pfp.resize((87, 87))
+
+        rip.paste(pfp, (57, 124))
+
+        rip.save('images/prip.jpg')
+
+        await ctx.send(file = discord.File('images/prip.jpg'))
+    
+    
+
+    @commands.command(name='radial',aliases=['radialblur','blur','funny'])
+    async def radial(self, ctx: commands.Context,help="",amount="10"):
+        img,amount,successful = await self.getImage(ctx,"radial",help,amount)
+        if not successful:
+            if(amount==0): #Error command
+                em = discord.Embed()
+                em.title = f'Error when running command'
+                em.description = f"Error: {img}."
+                em.color = 0xEE0000
+                await ctx.send(embed=em)
+                return
+            else: #Help Command
+                em = discord.Embed()
+                em.title = f'Usage: /radial [img|imgURL] [amount]'
+                em.description = f'Adds radial blur to the image attached, url in the message, or the image attached before the command by [amount] from 1 to 50'
+                em.add_field(name="Aliases", value="/blur /radialblur /funny", inline=False)
+                em.add_field(name="Examples", value="/radialblur https://imgur.com/a/wUChw7w | /blur (imageAttachment) 30", inline=False)
+                em.color = 0x22BBFF
+                await ctx.send(embed=em)
+                return()
+        await ctx.send("Processing... (This may take a while)")
+        toDelete = await self.getMessages(ctx,1)
+        # Processing
+        img = np.array(img) #convert PIL image to Numpy (CV2 works with numpy BRG arrays)
+        # Convert RGB to BGR 
+        img = cv.cvtColor(np.array(img), cv.COLOR_RGB2BGR)
+        w, h = img.shape[:2]
+        # Radial Blur
+        center_x = w / 2
+        center_y = h / 2
+        blur = amount/1000
+        iterations = 5
+        growMapx = np.tile(np.arange(h) + ((np.arange(h) - center_x)*blur), (w, 1)).astype(np.float32)
+        shrinkMapx = np.tile(np.arange(h) - ((np.arange(h) - center_x)*blur), (w, 1)).astype(np.float32)
+        growMapy = np.tile(np.arange(w) + ((np.arange(w) - center_y)*blur), (h, 1)).transpose().astype(np.float32)
+        shrinkMapy = np.tile(np.arange(w) - ((np.arange(w) - center_y)*blur), (h, 1)).transpose().astype(np.float32)
+
+        for i in range(iterations):
+            tmp1 = cv.remap(img, growMapx, growMapy, cv.INTER_LINEAR)
+            tmp2 = cv.remap(img, shrinkMapx, shrinkMapy, cv.INTER_LINEAR)
+            img = cv.addWeighted(tmp1, 0.5, tmp2, 0.5, 0)
+
+        #convert CV2 Numpy array to PIL
+        img = cv.cvtColor(img, cv.COLOR_BGR2RGB) #Change CV2 BGR to RGB
+        im_pil = Image.fromarray(img)   #Convert to PIL
+        # Convert to an attachable Discord Format
+        arr = io.BytesIO() #convert to bytes array
+        im_pil.save(arr, format='PNG')
+        arr.seek(0) #seek back to beginning of file
+        # Send
+        await ctx.send(file=discord.File(arr,'radial.png'))
+        await ctx.channel.delete_messages(toDelete)
+
+    @commands.command(name='swirl')
+    async def swirl(self, ctx: commands.Context,help="",amount="10"):
+        img,amount,successful = await self.getImage(ctx,"radial",help,amount)
+        if not successful:
+            if(amount==0): #Error command
+                em = discord.Embed()
+                em.title = f'Error when running command'
+                em.description = f"Error: {img}."
+                em.color = 0xEE0000
+                await ctx.send(embed=em)
+                return
+            else: #Help Command
+                em = discord.Embed()
+                em.title = f'Usage: /swirl [img|imgURL] [amount]'
+                em.description = f'Swirls the image attached, url in the message, or the image attached before the command by [amount] from -100 to 100'
+                em.add_field(name="Examples", value="/swirl https://imgur.com/a/wUChw7w | /swirl (imageAttachment) 30", inline=False)
+                em.color = 0x22BBFF
+                await ctx.send(embed=em)
+                return()
+        await ctx.send("Processing... (This may take a while)")
+        toDelete = await self.getMessages(ctx,1)
+        # Processing
+        from skimage.transform import swirl #import works here but not at the beginning
+        w,h = img.size
+        img = np.array(img) #convert PIl image to Numpy
+        # Swirl
+        img = swirl(img, strength=amount, radius=w/1.3)
+        img = (img*255).astype('uint8')
+        #convert numpy array to Pillow img
+        im_pil=Image.fromarray(img)
+        # Convert to an attachable Discord Format
+        arr = io.BytesIO() #convert to bytes array
+        im_pil.save(arr, format='PNG')
+        arr.seek(0) #seek back to beginning of file
+        # Send
+        await ctx.send(file=discord.File(arr,'swirl.png'))
+        await ctx.channel.delete_messages(toDelete)
+
+    
+    @commands.command()
+    async def naruto(self, ctx, user: discord.Member = None):
+        if not user:
+            user = ctx.author
+
+        naruto = Image.open("images/Naruto.png")
+
+        asset = user.avatar_url_as(size=128)
+        data = BytesIO(await asset.read())
+        pfp = Image.open(data)
+
+        pfp = pfp.resize((97, 97))
+        naruto.paste(pfp, (418, 120))
+
+        naruto.save("images/n.png")
+
+        await ctx.send(file=discord.File("images/n.png"))
+
+    @commands.command()
+    async def amongus(self, ctx, user: discord.Member = None):
+        if not user:
+            user = ctx.author
+
+        naruto = Image.open("images/Amongus.jpeg")
+
+        asset = user.avatar_url_as(size=128)
+        data = BytesIO(await asset.read())
+        pfp = Image.open(data)
+
+        pfp = pfp.resize((108, 108))
+        naruto.paste(pfp, (87, 25))
+
+        naruto.save("images/au.jpeg")
+
+        await ctx.send(file=discord.File("images/au.jpeg"))
+
+    @commands.command()
+    async def text(self, ctx, *, text = "No text entered"):
+
+        img = Image.open("images/White.jpeg")
+
+        draw = ImageDraw.Draw(img)
+        font = ImageFont.truetype("JosefinSans-Regular.ttf", 24)
+
+        draw.text((100,100), text, (0,0,0), font = font)
+
+        img.save("images/text.jpeg")
+
+        await ctx.send(file = discord.File("images/text.jpeg"))
+
+
+    @commands.command(aliases=['trigger', 'trg'])
+    async def triggered(self, ctx, member: discord.Member=None):
+        if not member: # if no member is mentioned
+            member = ctx.author # the user who ran the command will be the member
+            
+        async with aiohttp.ClientSession() as wastedSession:
+            async with wastedSession.get(f'https://some-random-api.ml/canvas/triggered?avatar={member.avatar_url_as(format="png", size=1024)}') as wastedImage: # get users avatar as png with 1024 size
+                imageData = BytesIO(await wastedImage.read()) # read the image/bytes
+            
+                
+                await ctx.send(file=discord.File(imageData, 'triggered.gif')) # sending the file
+
+    @commands.command()
+    async def wasted(self, ctx, member: discord.Member=None):
+        if not member: # if no member is mentioned
+            member = ctx.author # the user who ran the command will be the member
+            
+        async with aiohttp.ClientSession() as wastedSession:
+            async with wastedSession.get(f'https://some-random-api.ml/canvas/wasted?avatar={member.avatar_url_as(format="png", size=1024)}') as wastedImage: # get users avatar as png with 1024 size
+                imageData = BytesIO(await wastedImage.read()) # read the image/bytes
+            
+                
+                await ctx.send(file=discord.File(imageData, 'wasted.png')) # sending the file
+
+    @commands.command(aliases=['redpanda', 'redpandaimg'])
+    async def redpandaimage(self, ctx):
+        async with aiohttp.ClientSession() as ses:
+            async with ses.get('https://some-random-api.ml/img/red_panda') as f:
+                if f.status in range(200, 299):
+                    dat = await f.json()
+                    img = dat['link']
+                    em = discord.Embed(
+                        title='Red Panda',
+                        color = ctx.author.color
+                    )
+                    em.set_image(url=f'{img}')
+                    await ctx.send(embed=em)
+                    await ses.close()
+                else:
+                    await ctx.reply("Error when trying to get a red panda image.")
+                    await ses.close()
+    
+    @commands.command(aliases=['pikachu', 'pikachuimg', 'pika', 'pikaimg', 'pikaimage'])
+    async def pikachuimage(self, ctx):
+        async with aiohttp.ClientSession() as ses:
+            async with ses.get('https://some-random-api.ml/img/pikachu') as f:
+                if f.status in range(200, 299):
+                    dat = await f.json()
+                    img = dat['link']
+                    em = discord.Embed(
+                        title='Pikachu Image',
+                        color = ctx.author.color
+                    )
+                    em.set_image(url=f'{img}')
+                    await ctx.send(embed=em)
+                    await ses.close()
+                else:
+                    await ctx.reply("Error when trying to get a pikachu image.")
+                    await ses.close()
+
+
+
+    @commands.command()
+    async def glass(self, ctx, member: discord.Member=None):
+        if not member: # if no member is mentioned
+            member = ctx.author # the user who ran the command will be the member
+            
+        async with aiohttp.ClientSession() as wastedSession:
+            async with wastedSession.get(f'https://some-random-api.ml/canvas/glass?avatar={member.avatar_url_as(format="png", size=1024)}') as wastedImage: # get users avatar as png with 1024 size
+                imageData = BytesIO(await wastedImage.read()) # read the image/bytes
+            
+                
+                await ctx.send(file=discord.File(imageData, 'glass.png')) # sending the file
+    
+    @commands.command()
+    async def rainbow(self, ctx, member: discord.Member=None):
+        if not member: # if no member is mentioned
+            member = ctx.author # the user who ran the command will be the member
+            
+        async with aiohttp.ClientSession() as wastedSession:
+            async with wastedSession.get(f'https://some-random-api.ml/canvas/gay?avatar={member.avatar_url_as(format="png", size=1024)}') as wastedImage: # get users avatar as png with 1024 size
+                imageData = BytesIO(await wastedImage.read()) # read the image/bytes
+            
+                
+                await ctx.send(file=discord.File(imageData, 'rainbow.png')) # sending the 
+    
+    
+
+    @commands.command()
+    async def invert(self, ctx, member: discord.Member=None):
+        if not member: # if no member is mentioned
+            member = ctx.author # the user who ran the command will be the member
+            
+        async with aiohttp.ClientSession() as wastedSession:
+            async with wastedSession.get(f'https://some-random-api.ml/canvas/invert?avatar={member.avatar_url_as(format="png", size=1024)}') as wastedImage: # get users avatar as png with 1024 size
+                imageData = BytesIO(await wastedImage.read()) # read the image/bytes
+            
+                
+                await ctx.send(file=discord.File(imageData, 'inverted.png')) # sending the 
+
+    
+    
+    @commands.command()
+    async def blue(self, ctx, member: discord.Member=None):
+        if not member: # if no member is mentioned
+            member = ctx.author # the user who ran the command will be the member
+            
+        async with aiohttp.ClientSession() as wastedSession:
+            async with wastedSession.get(f'https://some-random-api.ml/canvas/blue?avatar={member.avatar_url_as(format="png", size=1024)}') as wastedImage: # get users avatar as png with 1024 size
+                imageData = BytesIO(await wastedImage.read()) # read the image/bytes
+            
+                
+                await ctx.send(file=discord.File(imageData, 'blue.png')) # sending the 
+
+    @commands.command()
+    async def green(self, ctx, member: discord.Member=None):
+        if not member: # if no member is mentioned
+            member = ctx.author # the user who ran the command will be the member
+            
+        async with aiohttp.ClientSession() as wastedSession:
+            async with wastedSession.get(f'https://some-random-api.ml/canvas/green?avatar={member.avatar_url_as(format="png", size=1024)}') as wastedImage: # get users avatar as png with 1024 size
+                imageData = BytesIO(await wastedImage.read()) # read the image/bytes
+            
+                
+                await ctx.send(file=discord.File(imageData, 'green.png')) # sending the 
+
+    @commands.command()
+    async def red(self, ctx, member: discord.Member=None):
+        if not member: # if no member is mentioned
+            member = ctx.author # the user who ran the command will be the member
+            
+        async with aiohttp.ClientSession() as wastedSession:
+            async with wastedSession.get(f'https://some-random-api.ml/canvas/red?avatar={member.avatar_url_as(format="png", size=1024)}') as wastedImage: # get users avatar as png with 1024 size
+                imageData = BytesIO(await wastedImage.read()) # read the image/bytes
+            
+                
+                await ctx.send(file=discord.File(imageData, 'red.png')) # sending the 
+
+    @commands.command()
+    async def sepia(self, ctx, member: discord.Member=None):
+        if not member: # if no member is mentioned
+            member = ctx.author # the user who ran the command will be the member
+            
+        async with aiohttp.ClientSession() as wastedSession:
+            async with wastedSession.get(f'https://some-random-api.ml/canvas/sepia?avatar={member.avatar_url_as(format="png", size=1024)}') as wastedImage: # get users avatar as png with 1024 size
+                imageData = BytesIO(await wastedImage.read()) # read the image/bytes
+            
+                
+                await ctx.send(file=discord.File(imageData, 'sepia.png')) # sending the 
+
+    @commands.command(aliases=['baw'])
+    async def blackwhite(self, ctx, member: discord.Member=None):
+        if not member: # if no member is mentioned
+            member = ctx.author # the user who ran the command will be the member
+            
+        async with aiohttp.ClientSession() as wastedSession:
+            async with wastedSession.get(f'https://some-random-api.ml/canvas/threshold?avatar={member.avatar_url_as(format="png", size=1024)}') as wastedImage: # get users avatar as png with 1024 size
+                imageData = BytesIO(await wastedImage.read()) # read the image/bytes
+            
+                
+                await ctx.send(file=discord.File(imageData, 'baw.png')) # sending the 
+
+    @commands.command(aliases=['bright'])
+    async def brightness(self, ctx, member: discord.Member=None):
+        if not member: # if no member is mentioned
+            member = ctx.author # the user who ran the command will be the member
+            
+        async with aiohttp.ClientSession() as wastedSession:
+            async with wastedSession.get(f'https://some-random-api.ml/canvas/brightness?avatar={member.avatar_url_as(format="png", size=1024)}') as wastedImage: # get users avatar as png with 1024 size
+                imageData = BytesIO(await wastedImage.read()) # read the image/bytes
+            
+                
+                await ctx.send(file=discord.File(imageData, 'bright.png')) # sending the 
+
+    
+
+
+    @commands.command()
+    async def tweet(self, ctx, *, msg="No text entered"):
+        async with aiohttp.ClientSession() as ses:
+            async with ses.get(f"https://nekobot.xyz/api/imagegen?type=tweet&username={ctx.author.name}&text={msg}") as f:
+                if f.status in range(200, 299):
+                    dat = await f.json()
+                    img = dat['message']
+                    em = discord.Embed(
+                        title='Tweeted!',
+                        color = ctx.author.color
+                    )
+                    em.set_image(url=f'{img}')
+                    await ctx.send(embed=em)
+                    await ses.close()
+                else:
+                    await ctx.reply("Error when trying to tweet.")
+                    await ses.close()
+
+    @commands.command()
+    async def magik(self, ctx, member:discord.Member=None):
+        if member == None:
+            member = ctx.author
+        async with aiohttp.ClientSession() as ses:
+            async with ses.get(f"https://nekobot.xyz/api/imagegen?type=magik&image={member.avatar_url}") as f:
+                if f.status in range(200, 299):
+                    dat = await f.json()
+                    img = dat['message']
+                    em = discord.Embed(
+                        title='Magikified!',
+                        color = ctx.author.color
+                    )
+                    em.set_image(url=f'{img}')
+                    await ctx.send(embed=em)
+                    await ses.close()
+                else:
+                    await ctx.reply("Error when trying to magikify.")
+                    await ses.close()
+
+    @commands.command()
+    async def iphonex(self, ctx, member:discord.Member=None):
+        if member == None:
+            member = ctx.author
+        async with aiohttp.ClientSession() as ses:
+            async with ses.get(f"https://nekobot.xyz/api/imagegen?type=iphonex&url={member.avatar_url}") as f:
+                if f.status in range(200, 299):
+                    dat = await f.json()
+                    img = dat['message']
+                    em = discord.Embed(
+                        title='Iphonexed!',
+                        color = ctx.author.color
+                    )
+                    em.set_image(url=f'{img}')
+                    await ctx.send(embed=em)
+                    await ses.close()
+                else:
+                    await ctx.reply("Error when trying to iphonex.")
+                    await ses.close()
+
+    @commands.command()
+    async def threats(self, ctx, member:discord.Member=None):
+        if member == None:
+            member = ctx.author
+        async with aiohttp.ClientSession() as ses:
+            async with ses.get(f"https://nekobot.xyz/api/imagegen?type=threats&url={member.avatar_url}") as f:
+                if f.status in range(200, 299):
+                    dat = await f.json()
+                    img = dat['message']
+                    em = discord.Embed(
+                        title='Done!',
+                        color = ctx.author.color
+                    )
+                    em.set_image(url=f'{img}')
+                    await ctx.send(embed=em)
+                    await ses.close()
+                else:
+                    await ctx.reply("Error when trying to threat.")
+                    await ses.close()
+    
+    @commands.command()
+    async def baguette(self, ctx, member:discord.Member=None):
+        if member == None:
+            member = ctx.author
+        async with aiohttp.ClientSession() as ses:
+            async with ses.get(f"https://nekobot.xyz/api/imagegen?type=baguette&url={member.avatar_url}") as f:
+                if f.status in range(200, 299):
+                    dat = await f.json()
+                    img = dat['message']
+                    em = discord.Embed(
+                        title='Baguetted!',
+                        color = ctx.author.color
+                    )
+                    em.set_image(url=f'{img}')
+                    await ctx.send(embed=em)
+                    await ses.close()
+                else:
+                    await ctx.reply("Error when trying to baguette.")
+                    await ses.close()
+
+    @commands.command()
+    async def clyde(self, ctx, *, text="No text entered"):
+
+        async with aiohttp.ClientSession() as ses:
+            async with ses.get(f"https://nekobot.xyz/api/imagegen?type=clyde&text={text}") as f:
+                if f.status in range(200, 299):
+                    dat = await f.json()
+                    img = dat['message']
+                    em = discord.Embed(
+                        title='Clyded!',
+                        color = ctx.author.color
+                    )
+                    em.set_image(url=f'{img}')
+                    await ctx.send(embed=em)
+                    await ses.close()
+                else:
+                    await ctx.reply("Error when trying to clyde.")
+                    await ses.close()
+
+
+    @commands.command()
+    async def captcha(self, ctx, member:discord.Member=None):
+        if member == None:
+            member = ctx.author
+        async with aiohttp.ClientSession() as ses:
+            async with ses.get(f"https://nekobot.xyz/api/imagegen?type=captcha&url={member.avatar_url}&username={member.name}") as f:
+                if f.status in range(200, 299):
+                    dat = await f.json()
+                    img = dat['message']
+                    em = discord.Embed(
+                        title='Captcha!',
+                        color = ctx.author.color
+                    )
+                    em.set_image(url=f'{img}')
+                    await ctx.send(embed=em)
+                    await ses.close()
+                else:
+                    await ctx.reply("Error when trying to captcha.")
+                    await ses.close()
+
+    @commands.command()
+    async def blurpify(self, ctx, member:discord.Member=None):
+        if member == None:
+            member = ctx.author
+        async with aiohttp.ClientSession() as ses:
+            async with ses.get(f"https://nekobot.xyz/api/imagegen?type=blurpify&image={member.avatar_url}") as f:
+                if f.status in range(200, 299):
+                    dat = await f.json()
+                    img = dat['message']
+                    em = discord.Embed(
+                        title='Blurpified!',
+                        color = ctx.author.color
+                    )
+                    em.set_image(url=f'{img}')
+                    await ctx.send(embed=em)
+                    await ses.close()
+                else:
+                    await ctx.reply("Error when trying to blurpify.")
+                    await ses.close()
+
+    @commands.command(aliases=['fry'])
+    async def deepfry(self, ctx, member:discord.Member=None):
+        if member == None:
+            member = ctx.author
+        async with aiohttp.ClientSession() as ses:
+            async with ses.get(f"https://nekobot.xyz/api/imagegen?type=deepfry&image={member.avatar_url}") as f:
+                if f.status in range(200, 299):
+                    dat = await f.json()
+                    img = dat['message']
+                    em = discord.Embed(
+                        title='Deep Fryed!',
+                        color = ctx.author.color
+                    )
+                    em.set_image(url=f'{img}')
+                    await ctx.send(embed=em)
+                    await ses.close()
+                else:
+                    await ctx.reply("Error when trying to deep fry.")
+                    await ses.close()
+    
+    @commands.command()
+    async def trap(self, ctx, member:discord.Member=None):
+        if member == None:
+            member = ctx.author
+        async with aiohttp.ClientSession() as ses:
+            async with ses.get(f"https://nekobot.xyz/api/imagegen?type=trap&name={member.name}&author={ctx.author.name}&image={member.avatar_url}") as f:
+                if f.status in range(200, 299):
+                    dat = await f.json()
+                    img = dat['message']
+                    em = discord.Embed(
+                        title='Trapped!',
+                        color = ctx.author.color
+                    )
+                    em.set_image(url=f'{img}')
+                    await ctx.send(embed=em)
+                    await ses.close()
+                else:
+                    await ctx.reply(f"Error when trying to trap {member.name}.")
+                    await ses.close()
+
+
+    @commands.command(aliases=['trumpt'])
+    async def trumptweet(self, ctx, *, msg="No text entered"):
+        async with aiohttp.ClientSession() as ses:
+            async with ses.get(f"https://nekobot.xyz/api/imagegen?type=trumptweet&text={msg}") as f:
+                if f.status in range(200, 299):
+                    dat = await f.json()
+                    img = dat['message']
+                    em = discord.Embed(
+                        title='Tweeted!',
+                        color = ctx.author.color
+                    )
+                    em.set_image(url=f'{img}')
+                    await ctx.send(embed=em)
+                    await ses.close()
+                else:
+                    await ctx.reply("Error when trying to tweet.")
+                    await ses.close()
+
+    @commands.command(aliases=['www'])
+    async def whowouldwin(self, ctx, member:discord.Member):
+        async with aiohttp.ClientSession() as ses:
+            async with ses.get(f"https://nekobot.xyz/api/imagegen?type=whowouldwin&user1={ctx.author.avatar_url}&user2={member.avatar_url}") as f:
+                if f.status in range(200, 299):
+                    dat = await f.json()
+                    img = dat['message']
+                    em = discord.Embed(
+                        title='Who Would Win?',
+                        color = ctx.author.color
+                    )
+                    em.set_image(url=f'{img}')
+                    await ctx.send(embed=em)
+                    await ses.close()
+                else:
+                    await ctx.reply("Error when trying to see who would win.")
+                    await ses.close()
+
+    @commands.command(aliases=['cmm'])
+    async def changemymind(self, ctx, *, msg="No text entered"):
+        async with aiohttp.ClientSession() as ses:
+            async with ses.get(f"https://nekobot.xyz/api/imagegen?type=changemymind&text={msg}") as f:
+                if f.status in range(200, 299):
+                    dat = await f.json()
+                    img = dat['message']
+                    em = discord.Embed(
+                        title='Done!',
+                        color = ctx.author.color
+                    )
+                    em.set_image(url=f'{img}')
+                    await ctx.send(embed=em)
+                    await ses.close()
+                else:
+                    await ctx.reply("Error when trying to change my mind.")
+                    await ses.close()
+
+    @commands.command()
+    async def kannagen(self, ctx, *, text = "No text entered"):
+        async with aiohttp.ClientSession() as ses:
+            async with ses.get(f"https://nekobot.xyz/api/imagegen?type=kannagen&text={text}") as f:
+                if f.status in range(200, 299):
+                    dat = await f.json()
+                    img = dat['message']
+                    em = discord.Embed(
+                        title='Kannagened!',
+                        color = ctx.author.color
+                    )
+                    em.set_image(url=f'{img}')
+                    await ctx.send(embed=em)
+                    await ses.close()
+                else:
+                    await ctx.reply("Error when trying to kannagen.")
+                    await ses.close()
+
+    @commands.command()
+    async def km(self, ctx, member:discord.Member=None):
+        if member == None:
+            member = ctx.author
+        async with aiohttp.ClientSession() as ses:
+            async with ses.get(f"https://nekobot.xyz/api/imagegen?type=kms&url={member.avatar_url}") as f:
+                if f.status in range(200, 299):
+                    dat = await f.json()
+                    img = dat['message']
+                    em = discord.Embed(
+                        title='Kmed!',
+                        color = ctx.author.color
+                    )
+                    em.set_image(url=f'{img}')
+                    await ctx.send(embed=em)
+                    await ses.close()
+                else:
+                    await ctx.reply("Error when trying to km.")
+                    await ses.close()
+
+    @commands.command()
+    async def awooify(self, ctx, member:discord.Member=None):
+        if member == None:
+            member = ctx.author
+        async with aiohttp.ClientSession() as ses:
+            async with ses.get(f"https://nekobot.xyz/api/imagegen?type=awooify&url={member.avatar_url}") as f:
+                if f.status in range(200, 299):
+                    dat = await f.json()
+                    img = dat['message']
+                    em = discord.Embed(
+                        title='Awoofied!',
+                        color = ctx.author.color
+                    )
+                    em.set_image(url=f'{img}')
+                    await ctx.send(embed=em)
+                    await ses.close()
+                else:
+                    await ctx.reply("Error when trying to awooify.")
+                    await ses.close()
+
+    @commands.command()
+    async def kidnap(self, ctx, member:discord.Member):
+        async with aiohttp.ClientSession() as ses:
+            async with ses.get(f"https://nekobot.xyz/api/imagegen?type=kidnap&image={member.avatar_url}") as f:
+                if f.status in range(200, 299):
+                    dat = await f.json()
+                    img = dat['message']
+                    em = discord.Embed(
+                        title='Kidnapped!',
+                        color = ctx.author.color
+                    )
+                    em.set_image(url=f'{img}')
+                    await ctx.send(embed=em)
+                    await ses.close()
+                else:
+                    await ctx.reply(f"Error when trying to kidnap {member.name}.")
+                    await ses.close()
+
+    
+
+    @commands.command()
+    async def stickbug(self, ctx, member:discord.Member=None):
+        if member == None:
+            member = ctx.author
+        async with aiohttp.ClientSession() as ses:
+            async with ses.get(f"https://nekobot.xyz/api/imagegen?type=stickbug&url={member.avatar_url}") as f:
+                if f.status in range(200, 299):
+                    dat = await f.json()
+                    img = dat['message']
+                    em = discord.Embed(
+                        title='Stuckbugged!',
+                        color = ctx.author.color
+                    )
+                    em.set_image(url=f'{img}')
+                    await ctx.send(embed=em)
+                    await ses.close()
+                else:
+                    await ctx.reply("Error when trying to stickbug.")
+                    await ses.close()
+
+    @commands.command()
+    async def food(self, ctx):
+        async with aiohttp.ClientSession() as ses:
+            async with ses.get(f"https://nekobot.xyz/api/image?type=food") as f:
+                if f.status in range(200, 299):
+                    dat = await f.json()
+                    img = dat['message']
+                    color = dat['color']
+                    em = discord.Embed(
+                        title='Food Photo!',
+                        color = color
+                    )
+                    em.set_image(url=f'{img}')
+                    await ctx.send(embed=em)
+                    await ses.close()
+                else:
+                    await ctx.reply("Error when trying to find a food photo.")
+                    await ses.close()
+
+
+    @commands.command()
+    async def coffee(self, ctx):
+        async with aiohttp.ClientSession() as ses:
+            async with ses.get(f"https://nekobot.xyz/api/image?type=coffee") as f:
+                if f.status in range(200, 299):
+                    dat = await f.json()
+                    img = dat['message']
+                    color = dat['color']
+                    em = discord.Embed(
+                        title='Coffee Photo!',
+                        color = color
+                    )
+                    em.set_image(url=f'{img}')
+                    await ctx.send(embed=em)
+                    await ses.close()
+                else:
+                    await ctx.reply("Error when trying to find a coffee photo.")
+                    await ses.close()
+
+    @commands.command(aliases=['ytc', 'ytcomment'])
+    async def youtubecomment(self, ctx, text = "No text entered."):
+            
+        async with aiohttp.ClientSession() as wastedSession:
+            async with wastedSession.get(f'https://some-random-api.ml/canvas/youtube-comment?avatar={ctx.author.avatar_url_as(format="png", size=1024)}&username={ctx.author.display_name}&comment={text}') as wastedImage: # get users avatar as png with 1024 size
+                imageData = io.BytesIO(await wastedImage.read()) # read the image/bytes
+                
+                await wastedSession.close() # closing the session and;
+                
+                await ctx.reply(file=discord.File(imageData, 'ytcomment.png')) # sending the file
+
+def setup(client):
+    client.add_cog(Images(client))
+
