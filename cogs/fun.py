@@ -8,15 +8,7 @@ import aiohttp
 import urllib, re
 import giphy_client
 from giphy_client.rest import ApiException
-from io import BytesIO
-from datetime import datetime
 from discord.ext import commands
-import spice_api as spice
-import gc
-from bs4 import BeautifulSoup
-from lxml import etree
-from urllib.parse import parse_qs
-from utils.helper import edit, permEmbed
 
 
 class Fun(commands.Cog):
@@ -31,7 +23,129 @@ class Fun(commands.Cog):
     async def on_ready(self):
         print('Fun cog is ready.')
 
-    # commands
+        
+
+    # command
+    @commands.command()
+    async def art(self, ctx):
+        await ctx.send(" _______  _______  _______ _________ _______  _______ \n\
+(  ____ )(  ___  )(  ____ )\__   __/(  ___  )(  ____ )\n\
+| (    )|| (   ) || (    )|   ) (   | (   ) || (    )|\n\
+| (____)|| (___) || (____)|   | |   | |   | || (____)|\n\
+|     __)|  ___  ||  _____)   | |   | |   | ||     __)\n\
+| (\ (   | (   ) || (         | |   | |   | || (\ (   \n\
+| ) \ \__| )   ( || )         | |   | (___) || ) \ \__\n\
+|/   \__/|/     \||/          )_(   (_______)|/   \__/")
+
+    @commands.command()
+    async def kill(self, ctx, member : discord.Member, *,reason="we dont know"):
+        killembed1 = discord.Embed(title=f'{ctx.author} kills {member}',
+                                description=f'{ctx.author} kills {member.mention} because {reason}',
+                                color=0x000000)
+        killembed1.set_image(url='https://i.makeagif.com/media/1-01-2016/wXy365.gif')
+        #killembed1.set_footer(text='*Bot created by (tamrol077 on github)(Discord: tamrol073#6998)*')
+        killembed2 = discord.Embed(title=f'{ctx.author} kills {member}',
+                                description=f'{ctx.author} kills {member.mention} because {reason}',
+                                color=0x000000)
+        killembed2.set_image(url='https://media0.giphy.com/media/lnakxcfG2MFy/giphy.gif?cid=ecf05e472df4670f3de1b99cf0d4c74fda21a320f909db8f&rid=giphy.gif')
+        #killembed2.set_footer(text='*Bot created (tamrol077 on github)(Discord: tamrol073#6998)*')
+        killembed3 = discord.Embed(title=f'{ctx.author} kills {member}',
+                                description=f'{ctx.author} kills {member.mention} because {reason}',
+                                color=0x000000)
+        killembed3.set_image(url='https://media3.giphy.com/media/129bQn91wmtjiw/giphy.gif')
+        
+        killembed4 = discord.Embed(title=f'{ctx.author} kills {member}',
+                                description=f'{ctx.author} kills {member.mention} because {reason}',
+                                color=0x000000)
+        killembed4.set_image(url='https://www.gif-maniac.com/gifs/30/30172.gif')
+       
+        listakill = [killembed1, killembed2, killembed3, killembed4]
+        await ctx.send(embed=random.choice(listakill))
+
+
+    @kill.error
+    async def killerror(self, ctx,error):
+        if isinstance(error,commands.MissingRequiredArgument):
+            errore = discord.Embed(title=f'{ctx.author},you need to provide the right arguments',description=f'Check the syntax of the command in the help command.',color=0x000000)
+            \
+            await ctx.send(embed=errore)
+
+    @commands.command()
+    async def dance(self, ctx):
+        dance1 = discord.Embed(title=f'{ctx.author} dances',
+                            description='Hes probably very happy because yugoslavia reunited',
+                            color=0x000000)
+        dance1.set_image(url='https://media1.tenor.com/images/75f0038c50cc4e2262077eef48f576c3/tenor.gif?itemid=12740205')
+        #dance1.set_footer(text='*Bot created by tamrol073#6998(github: tamrol077)*')
+        dance2 = discord.Embed(title=f'{ctx.author} dances',
+                            description='Hes probably very happy because yugoslavia reunited',
+                            color=0x000000)
+        dance2.set_image(url='https://media.tenor.com/images/c3b9522dbfe8be78ff4dc305c999013e/tenor.gif')
+        #dance2.set_footer(text='*Bot created by tamrol073#6998(github: tamrol077)*')
+        dance3 = discord.Embed(title=f'{ctx.author} dances',
+                            description='Hes probably very happy because yugoslavia reunited',
+                            color=0x000000)
+        dance3.set_image(url='https://media1.tenor.com/images/d736d9c410f88cb56a0f44a455e46464/tenor.gif?itemid=12740209')
+        #dance3.set_footer(text='*Bot created by tamrol073#6998(github: tamrol077)*')
+        dance4 = discord.Embed(title=f'{ctx.author} dances',
+                            description='Hes probably very happy because yugoslavia reunited',
+                            color=0x000000)
+        dance4.set_image(url='https://media1.tenor.com/images/61cf901b1c520204c5c185d4a4244b78/tenor.gif?itemid=13410605')
+        #dance4.set_footer(text='*Bot created by tamrol073#6998(github: tamrol077)*')
+        dances = [dance1, dance2, dance3, dance4]
+        await ctx.send(embed=random.choice(dances))
+
+    @commands.command()
+    async def suicide(self, ctx):
+        suicideembed = discord.Embed(title=f'{ctx.author} kills himself', description="He's probably sad", color=0x000000)
+        suicideembed.set_image(
+                url='https://media1.giphy.com/media/c6DIpCp1922KQ/giphy.gif')
+            
+        suicideembed2 = discord.Embed(title=f'{ctx.author} kills himself',
+                description="He's probably sad",
+                color=0x000000)
+        suicideembed2.set_image(
+            url='https://media1.tenor.com/images/041dddf7d24b9ba3d591e0bed2ce38c7/tenor.gif?itemid=4524247')
+        
+        suicideembed3 = discord.Embed(title=f'{ctx.author} kills himself',
+                                    description="He's probably sad",
+                                    color=0x000000)
+        suicideembed3.set_image(url='https://i.makeagif.com/media/9-14-2015/vyNnjt.gif')
+
+        suicideembed4 = discord.Embed(title=f'{ctx.author} kills himself',
+                                    description="He's probably sad",
+                                    color=0x000000)
+        suicideembed4.set_image(url='https://thumbs.gfycat.com/SnarlingTameEquine-max-1mb.gif')
+        suicideembed5 = discord.Embed(title=f'{ctx.author} commits kermit suicide',
+                                    description="He's probably sad",
+                                    color=0x000000)
+        suicideembed5.set_image(url='https://media2.giphy.com/media/13kJc5CTOnqdQk/giphy.gif')
+        
+        suicidio = [suicideembed, suicideembed2, suicideembed3, suicideembed4, suicideembed5]
+        await ctx.send(embed=random.choice(suicidio))
+
+
+    @commands.command()
+    async def drink(self, ctx):
+        salve = random.randint(1,15)
+        boss = [f'{ctx.author} remains sober after {salve} shots!',f'{ctx.author} gets drunk after {salve} shots!']
+        poo = random.choice(boss)
+        deshqiperine = ['https://media1.tenor.com/images/4a6e5632592a753d5ddd4ecef30357e6/tenor.gif?itemid=3558432','https://media1.tenor.com/images/8e830da5d0e3e08ae2469e9bf6afc5c9/tenor.gif?itemid=8561333']
+        if salve > 7:
+            embed = discord.Embed(title=f'{ctx.author} drinks a shot like a true slav!', description=f'{ctx.author.mention} drinks a shot like true slav', color=0x000000)
+            embed.add_field(name='Very epic, hes a true slav', value=poo, inline=False)
+            embed.set_image(url=random.choice(deshqiperine))
+            #embed.set_footer(text='Bot made by (tamrol077 on github)(Discord: tamrol073#6998)')
+        else:
+            embed = discord.Embed(title=f'{ctx.author} drinks a shot like a true slav!', description=f'{ctx.author.mention} drinks a shot like true slav', color=0x000000)
+            embed.add_field(name=f'{ctx.author} gets drunk after {salve} shots!', value='What a big shame', inline=False)
+            embed.set_image(url=random.choice(deshqiperine))
+            #embed.set_footer(text='Bot made by (tamrol077 on github)(Discord: tamrol073#6998)')
+        await ctx.send(embed=embed)
+
+    
+
+
     @commands.command(aliases=['fite'])
     async def fight(self, ctx, user1: discord.Member, user2: discord.Member = None):
         if user2 == None:
@@ -62,119 +176,115 @@ class Fun(commands.Cog):
             return
         
         em = discord.Embed(title = "Hack Complete!", description = f"{user.mention} is now hacked.", color = ctx.author.color)
-        async with aiohttp.ClientSession() as ses:
-            async with ses.get('https://api.happi.dev/v1/generate-password?apikey=3e7850ObbtDYPtJQ1a98mQugZH0uF3B9ymBa04LHIVe8TzAM8lvJfBaK&limit=100&length=11&num=1&upper=1&symbols=0') as f:
-                if f.status in range(200, 299):
-                    dat = await f.json()
-                    img = dat['passwords']
-                    em.add_field(name = "Password:", value = random.choice(img))
-                    await ses.close()
-                else:
-                    await ctx.reply(f"Error when trying to hack {ctx.author}.")
-                    await ses.close()
-        
-        message = await ctx.send(f" | Locating {user}")
-        await asyncio.sleep(1)
-        await message.edit(content=f" / Locating {user}")
-        await asyncio.sleep(1)
-        await message.edit(content=f" - Locating {user}")
-        await asyncio.sleep(1)
-        await message.edit(content=f" \ Locating {user}")
-        await asyncio.sleep(1)
-        await message.edit(content=f" | Found {user}!")
-        await asyncio.sleep(1)
-        await message.edit(content=f" / Installing `virus.exe` on {user}'s computer")
-        await asyncio.sleep(1)
-        await message.edit(content=f" - Installing `virus.exe` on {user}'s computer")
-        await asyncio.sleep(1)
-        await message.edit(content=f" \ Installing `virus.exe` on {user}'s computer")
-        await asyncio.sleep(1)
-        await message.edit(content=f" | Installed `virus.exe` on {user}'s computer!")
-        await asyncio.sleep(1)
-        await message.edit(content=f" / Installing `hack.exe` on {user}'s computer")
-        await asyncio.sleep(1)
-        await message.edit(content=f" - Installing `hack.exe` on {user}'s computer")
-        await asyncio.sleep(1)
-        await message.edit(content=f" \ Installing `hack.exe` on {user}'s computer")
-        await asyncio.sleep(1)
-        await message.edit(content=f" | Installed `hack.exe` on {user}'s computer!")
-        await asyncio.sleep(1)
-        await message.edit(content=f" / Opening `virus.exe` on {user}'s computer")
-        await asyncio.sleep(1)
-        await message.edit(content=f" - Opening `virus.exe` on {user}'s computer")
-        await asyncio.sleep(1)
-        await message.edit(content=f" \ Opening `virus.exe` on {user}'s computer")
-        await asyncio.sleep(1)
-        await message.edit(content=f" | Opened `virus.exe` on {user}'s computer!")
-        await asyncio.sleep(1)
-        await message.edit(content=f" / Opening `hack.exe` on {user}'s computer")
-        await asyncio.sleep(1)
-        await message.edit(content=f" - Opening `hack.exe` on {user}'s computer")
-        await asyncio.sleep(1)
-        await message.edit(content=f" \ Opening `hack.exe` on {user}'s computer")
-        await asyncio.sleep(1)
-        await message.edit(content=f" | Opened `hack.exe` on {user}'s computer!")
-        await asyncio.sleep(1)
-        await message.edit(content=f" / Finding {user}'s password")
-        await asyncio.sleep(1)
-        await message.edit(content=f" - Finding {user}'s password")
-        await asyncio.sleep(1)
-        await message.edit(content=f" \ Finding {user}'s password")
-        await asyncio.sleep(1)
-        await message.edit(content=f" | Found {user}'s password!")
-        await asyncio.sleep(1)
-        await message.edit(content=f" / Finding {user}'s email")
-        await asyncio.sleep(1)
-        await message.edit(content=f" - Finding {user}'s email")
-        await asyncio.sleep(1)
-        await message.edit(content=f" \ Finding {user}'s email")
-        await asyncio.sleep(1)
-        await message.edit(content=f" | Found {user}'s email!")
-        await asyncio.sleep(1)
-        await message.edit(content=f" / Finding {user}'s IP")
-        await asyncio.sleep(1)
-        await message.edit(content=f" - Finding {user}'s IP")
-        await asyncio.sleep(1)
-        await message.edit(content=f" \ Finding {user}'s IP")
-        await asyncio.sleep(1)
-        await message.edit(content=f" | Found {user}'s IP!")
-        await asyncio.sleep(1)
-        await message.edit(content=f" / Finding {user}'s credit card number")
-        await asyncio.sleep(1)
-        await message.edit(content=f" - Finding {user}'s credit card number")
-        await asyncio.sleep(1)
-        await message.edit(content=f" \ Finding {user}'s credit card number")
-        await asyncio.sleep(1)
-        await message.edit(content=f" | Found {user}'scredit card number!")
-        await asyncio.sleep(1)
-        await message.edit(content=f"Hack Complete! Info Found 🔽")
-        await asyncio.sleep(1)
-        
         n = open("txt/ip.txt", "r")
         adf = n.readlines()
         a = open("txt/email.txt", "r")
         adfr = a.readlines()
         
+        b = open("txt/credit.txt", "r")
+        sdfg = b.readlines()
 
-        ccnum = [4916203993289649, 4485368316180493, 4707798072688812, 4929478394130999, 4532502562750970, 5399681296848000, 5336877123229804, 5575632900543848, 5346239767112572, 5552940859546721, 6011339835848686, 6011170161848978, 6011404178411417, 6011204735377444, 6011923372622966, 344506431923128, 370117046050765, 343595931390491, 377355613049124, 375835129642415]
-        em.add_field(name = "I.P. Address:", value = random.choice(adf))
-        em.add_field(name = "Email:", value = random.choice(adfr))
-        em.add_field(name = "Credit Card Num.:", value = random.choice(ccnum))
-        em.add_field(name = "Hacker:", value = "Me!")
-        em.add_field(name = "Who Wanted Me To Hack:", value = ctx.author.mention)
+        
+        em.add_field(name = ":e_mail: Email:", value = random.choice(adfr))
+        async with aiohttp.ClientSession() as ses:
+            async with ses.get('https://api.happi.dev/v1/generate-password?apikey=3e7850ObbtDYPtJQ1a98mQugZH0uF3B9ymBa04LHIVe8TzAM8lvJfBaK&limit=100&length=11&num=1&upper=1&symbols=0') as f:
+                if f.status in range(200, 299):
+                    dat = await f.json()
+                    img = dat['passwords']
+                    em.add_field(name = ":lock: Password:", value = random.choice(img))
+                    await ses.close()
+                else:
+                    await ctx.reply(f"Error when trying to hack {ctx.author}.")
+                    await ses.close()
+        use = user.display_name
+        message = await ctx.send(f" | Locating {use}")
+        await asyncio.sleep(1)
+        await message.edit(content=f" / Locating {use}")
+        await asyncio.sleep(1)
+        await message.edit(content=f" - Locating {use}")
+        await asyncio.sleep(1)
+        await message.edit(content=f" \ Locating {use}")
+        await asyncio.sleep(1)
+        await message.edit(content=f" | Found {use}!")
+        await asyncio.sleep(1)
+        await message.edit(content=f" / Installing `virus.exe` on {use}'s computer")
+        await asyncio.sleep(1)
+        await message.edit(content=f" - Installing `virus.exe` on {use}'s computer")
+        await asyncio.sleep(1)
+        await message.edit(content=f" \ Installing `virus.exe` on {use}'s computer")
+        await asyncio.sleep(1)
+        await message.edit(content=f" | Installed `virus.exe` on {use}'s computer!")
+        await asyncio.sleep(1)
+        await message.edit(content=f" / Installing `hack.exe` on {use}'s computer")
+        await asyncio.sleep(1)
+        await message.edit(content=f" - Installing `hack.exe` on {use}'s computer")
+        await asyncio.sleep(1)
+        await message.edit(content=f" \ Installing `hack.exe` on {use}'s computer")
+        await asyncio.sleep(1)
+        await message.edit(content=f" | Installed `hack.exe` on {use}'s computer!")
+        await asyncio.sleep(1)
+        await message.edit(content=f" / Opening `virus.exe` on {use}'s computer")
+        await asyncio.sleep(1)
+        await message.edit(content=f" - Opening `virus.exe` on {use}'s computer")
+        await asyncio.sleep(1)
+        await message.edit(content=f" \ Opening `virus.exe` on {use}'s computer")
+        await asyncio.sleep(1)
+        await message.edit(content=f" | Opened `virus.exe` on {use}'s computer!")
+        await asyncio.sleep(1)
+        await message.edit(content=f" / Opening `hack.exe` on {use}'s computer")
+        await asyncio.sleep(1)
+        await message.edit(content=f" - Opening `hack.exe` on {use}'s computer")
+        await asyncio.sleep(1)
+        await message.edit(content=f" \ Opening `hack.exe` on {use}'s computer")
+        await asyncio.sleep(1)
+        await message.edit(content=f" | Opened `hack.exe` on {use}'s computer!")
+        await asyncio.sleep(1)
+        await message.edit(content=f" / Finding {use}'s password")
+        await asyncio.sleep(1)
+        await message.edit(content=f" - Finding {use}'s password")
+        await asyncio.sleep(1)
+        await message.edit(content=f" \ Finding {use}'s password")
+        await asyncio.sleep(1)
+        await message.edit(content=f" | Found {use}'s password!")
+        await asyncio.sleep(1)
+        await message.edit(content=f" / Finding {use}'s email")
+        await asyncio.sleep(1)
+        await message.edit(content=f" - Finding {use}'s email")
+        await asyncio.sleep(1)
+        await message.edit(content=f" \ Finding {use}'s email")
+        await asyncio.sleep(1)
+        await message.edit(content=f" | Found {use}'s email!")
+        await asyncio.sleep(1)
+        await message.edit(content=f" / Finding {use}'s IP")
+        await asyncio.sleep(1)
+        await message.edit(content=f" - Finding {use}'s IP")
+        await asyncio.sleep(1)
+        await message.edit(content=f" \ Finding {use}'s IP")
+        await asyncio.sleep(1)
+        await message.edit(content=f" | Found {use}'s IP!")
+        await asyncio.sleep(1)
+        await message.edit(content=f" / Finding {use}'s credit card number")
+        await asyncio.sleep(1)
+        await message.edit(content=f" - Finding {use}'s credit card number")
+        await asyncio.sleep(1)
+        await message.edit(content=f" \ Finding {use}'s credit card number")
+        await asyncio.sleep(1)
+        await message.edit(content=f" | Found {use}'scredit card number!")
+        await asyncio.sleep(1)
+        await message.edit(content=f"Hack Complete! Info Found 🔽")
+        await asyncio.sleep(1)
+        
+        em.add_field(name = ":computer: IP Address:", value = random.choice(adf))
+        em.add_field(name = ":credit_card: Credit Card Num.:", value = random.choice(sdfg))
+        em.add_field(name = ":sunglasses: Hacker:", value = ctx.author.mention)
+        em.add_field(name = ":disguised_face: Who Got *totally* Hacked:", value = user.mention)
         em.set_footer(text = "This hack is **totally** real and **completely** dangerous.")
         await ctx.send(embed = em)
 
 
 
-    @commands.command(aliases = ['emotes'])
-    async  def  emojis (self, ctx):
-        '' 'Displays all emojis to which the bot has access' ''
-        msg  =  ''
-        for emoji in self.client.emojis:
-            if len(msg) + len(str(emoji)) > 1000:
-                msg += str(emoji)
-                await ctx.send(msg)
+        
+            
 
     
 
@@ -241,14 +351,43 @@ class Fun(commands.Cog):
         rate_amount = random.randint(0, 100)
         await ctx.send(f"I'd rate `{thing}` a **{round(rate_amount, 4)} / 100**")
 
-    
+    @commands.command(brief='Rickrolls someone...', description='Rickrolls someone... See thier reaction!', aliases=['rr'])
+    async def rickroll(self, ctx):
+        em = discord.Embed(title = "Rickroll!", description = "Have Fun :P", color = ctx.author.color)
+        em.set_image(url = 'https://media.tenor.com/images/a1505c6e6d37aa2b7c5953741c0177dc/tenor.gif')
+        await ctx.send(embed = em)
+
+    @commands.command(brief='troll', description='troll')
+    async def troll(self, ctx):
+        em = discord.Embed(title = "Troll!", description = "Have Fun :P", color = ctx.author.color)
+        em.set_image(url = 'https://media1.tenor.com/images/56b2b212b5a14ce62cafd056ce954500/tenor.gif?itemid=5259835')
+        await ctx.send(embed = em)
 
     @commands.command(aliases=['8ball'])
     async def eightball(self, ctx, *, msg):
-        f = ['Yes','No','Maybe','IDK']
+        responses = ["It is certain.",
+                 "It is decidedly so.",
+                 "Without a doubt.",
+                 "Yes - definitely.",
+                 "You may rely on it.",
+                 "As I see it, yes.",
+                 "Most likely.",
+                 "Outlook good.",
+                 "Yes.",
+                 "Signs point to yes.",
+                 "Reply hazy, try again.",
+                 "Ask again later.",
+                 "Better not tell you now.",
+                 "Cannot predict now.",
+                 "Concentrate and ask again.",
+                 "Don't count on it.",
+                 "My reply is no.",
+                 "My sources say no.",
+                 "Outlook not so good.",
+                 "Very doubtful."]
         
         question = msg
-        embed = discord.Embed(title = f"**Question:** {question}", description = f"The answer to your question is **{random.choice(f)}**", color = ctx.author.color)
+        embed = discord.Embed(title = f"**Question:** {question}", description = f"The answer to your question is **{random.choice(responses)}**", color = ctx.author.color)
         embed.set_author(name = "8Ball!", icon_url = "https://cdn.discordapp.com/emojis/832386089314549791.gif?v=1")
         await ctx.send(embed = embed)
 
@@ -403,15 +542,6 @@ class Fun(commands.Cog):
             print("Error when calling gif api")
 
 
-    @commands.command()
-    async def kill(self, ctx, member:discord.Member):
-        ran_die = ['I\'m too young to die!','I\'m too old to die!', 'Take my wife!', 'Take my children!', 'Take my family!']
-        k_n = ["(*slice*)", "(*baam*)", "(*boom*)", "(*gunshot*)"]
-        await ctx.send(f"{ctx.author.mention}: I want to kill you, {member.mention}. \n\
-{member.mention}: {random.choice(ran_die)}\n\
-{ctx.author.mention}: No excuses. You\'re dead.\n\
-{random.choice(k_n)}\n\
-{ctx.author.mention}: **The End**")
 
     
 

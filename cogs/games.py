@@ -1,20 +1,21 @@
 import discord
 import random
-import base91
-import numpy as np
 import asyncio
+from games import wumpas as wumpus, minesweeper
+import requests
+import html
 from discord.ext import commands
 from random import randint
-from hangman.controller import HangmanGame
+
 
 smoother = True
-
 player1 = ""
 player2 = ""
 turn = ""
 gameOver = True
-
+active_games = {}
 board = []
+games = {}
 
 winningConditions = [
     [0, 1, 2],
@@ -27,14 +28,6 @@ winningConditions = [
     [2, 4, 6]
 ]
 
-numbers = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]
-
-def checkWinner(self, winningConditions, mark):
-        global gameOver
-        for condition in winningConditions:
-            if board[condition[0]] == mark and board[condition[1]] == mark and board[condition[2]] == mark:
-                gameOver = True
-
 
 
 
@@ -46,283 +39,54 @@ class Games(commands.Cog):
         self.client = client
         self.ttt_games = {}
 
-    # events
-
-    def array_to_string(self, array_in, user):
-        string = ""
-        string2 = ""
-        rows = array_in.shape[0]
-        cols = array_in.shape[1]
-
-        for x in range(0, rows):
-            for y in range(0, cols):
-                string += str(array_in[x][y]).replace(".0", "")
-                for i in range(0, len(str(np.amax(array_in)).replace(".0", "")) - len(
-                        str(array_in[x][y]).replace(".0", ""))):
-                    string2 += ":new_moon:"
-                for char in str(array_in[x][y]).replace(".0", ""):
-                    if char == "0" and str(array_in[x][y]).replace(".0", "") == "0":
-                        string2 += ":new_moon:"
-                    else:
-                        string2 += ":" + numbers[int(char)] + ":"
-                if y != 3:
-                    string += ","
-                    if len(str(np.amax(array_in)).replace(".0", "")) > 1:
-                        string2 += ":tm:"
-                    else:
-                        string2 += "   "
-            if x != 3:
-                string += "|"
-                string2 += "\n"
-                for i in range(0, len(str(np.amax(array_in)).replace(".0", ""))):
-                    string2 += "\n"
-
-        # Adds user id so the next action can tell who the game belongs to
-        string += "[]%s" % user
-
-        # Returns string2 as well which is the emoji-fied version of the game board
-        return string, string2
-
-
-    def string_to_array(self, string):
-        # Turn the string from the footer back into a numpy array that can be acted upon
-        output = np.zeros((4, 4))
-        x_num = 0
-        y_num = 0
-        for x in string.split("[]")[0].split("|"):
-            for y in x.split(","):
-                output[x_num][y_num] = y
-                y_num += 1
-            y_num = 0
-            x_num += 1
-        user = string.split("[]")[1]
-
-        # Returns output array and original game user
-        return output, user
-
-
-    async def delete_game(self, reaction):
-        await reaction.message.edit(content="*Game removed*", embed=None)
-        for emoji in ['⬆', '⬇', '⬅', '➡']:
-            await reaction.message.remove_reaction(emoji=emoji, member=self.client.user)
-        await reaction.message.remove_reaction(emoji=reaction, member=self.client.user)
-
-
-    def check_valid(self, output2):
-        # Check for valid moves
-        rows = output2.shape[0]
-        cols = output2.shape[1]
-        found = False
-        original = output2
-
-        for j in range(0, 4):
-            output2 = np.zeros(shape=(4, 4))
-            output = original
-            output = np.rot90(output, j)
-            # Move everything to the left 4 times to be sure to get everything
-            for i in range(0, 3):
-                output2 = np.zeros(shape=(4, 4))
-                for x in range(0, cols):
-                    for y in range(0, rows):
-                        if y != 0:
-                            if output[x][y - 1] == 0:
-                                output2[x][y - 1] = output[x][y]
-                            else:
-                                output2[x][y] = output[x][y]
-                        else:
-                            output2[x][y] = output[x][y]
-                output = output2
-
-            # Combine adjacent equal tiles
-            output3 = np.zeros(shape=(4, 4))
-            for x in range(0, cols):
-                for y in range(0, rows):
-                    if y != 0:
-                        if output2[x][y - 1] == output2[x][y]:
-                            output3[x][y - 1] = output2[x][y] * 2
-                        else:
-                            output3[x][y] = output2[x][y]
-                    else:
-                        output3[x][y] = output2[x][y]
-
-            output = output3
-
-            # Move over two more times
-            for i in range(0, 1):
-                output3 = np.zeros(shape=(4, 4))
-                for x in range(0, cols):
-                    for y in range(0, rows):
-                        if y != 0:
-                            if output[x][y - 1] == 0:
-                                output3[x][y - 1] = output[x][y]
-                            else:
-                                output3[x][y] = output[x][y]
-                        else:
-                            output3[x][y] = output[x][y]
-                output = output3
-
-            output2 = output3
-            output2 = np.rot90(output2, 4-j)
-
-            if np.array_equal(original, output2) is False:
-                found = True
-
-        if found is True:
-            return True
-        else:
-            return False
-
-
+    
     @commands.Cog.listener()
     async def on_ready(self):
-        print('game cog is ready.')
+        print("Games are loaded")
+    # events
+    @commands.command(name='survival')
+    async def _wumpus(self, ctx):
+        """Play a survival game, try to find the dragon without dying!"""
+        await wumpus.play(self.client, ctx)
 
-    
-
-    players = {}
-    
-    # TicTacToe COMMAND
-    
-    @commands.command(aliases=['ttt'])
-    async def tictactoe(self, ctx, player: discord.Member):
-        global count
-        global player1
-        global player2
-        global turn
-        global gameOver
-
-        if player == ctx.author:
-            await ctx.send("You can\'t play with yourself!")
-            return
-        if player == ctx.bot:
-            await ctx.send("You can\'t play with a bot!")
-        if gameOver:
-            global board
-            board = [":white_large_square:", ":white_large_square:", ":white_large_square:",
-                    ":white_large_square:", ":white_large_square:", ":white_large_square:",
-                    ":white_large_square:", ":white_large_square:", ":white_large_square:"]
-            turn = ""
-            gameOver = False
-            count = 0
-
-            player1 = ctx.author
-            player2 = player
-
-            # print the board
-            line = ""
-            for x in range(len(board)):
-                if x == 2 or x == 5 or x == 8:
-                    line += " " + board[x]
-                    await ctx.send(line)
-                    line = ""
-                else:
-                    line += " " + board[x]
-
-            # determine who goes first
-            num = random.randint(1, 2)
-            if num == 1:
-                turn = player1
-                await ctx.send("It is <@" + str(player1.id) + ">'s turn.")
-            elif num == 2:
-                turn = player2
-                await ctx.send("It is <@" + str(player2.id) + ">'s turn.")
-        else:
-            await ctx.send("A game is already in progress! Finish it before starting a new one.")
-
-    @commands.command(aliases=['place'])
-    async def tttplace(self, ctx, pos: int):
-        global turn
-        global player1
-        global player2
-        global board
-        global count
-        global gameOver
+    @commands.command(name='minesweeper', aliases=['ms'])
+    async def _minesweeper(self, ctx, columns = None, rows = None, bombs = None):
+        """Play Minesweeper"""
+        await minesweeper.play(ctx, columns, rows, bombs)
 
 
-        
-        if not gameOver:
-            mark = ""
-            if turn == ctx.author:
-                if turn == player1:
-                    mark = ":regional_indicator_x:"
-                elif turn == player2:
-                    mark = ":o2:"
-                if 0 < pos < 10 and board[pos - 1] == ":white_large_square:" :
-                    board[pos - 1] = mark
-                    count += 1
 
-                    # print the board
-                    line = ""
-                    for x in range(len(board)):
-                        if x == 2 or x == 5 or x == 8:
-                            line += " " + board[x]
-                            await ctx.send(line)
-                            line = ""
-                        else:
-                            line += " " + board[x]
+    @commands.command(name="guess", help="guessing game")
+    async def guess(self,ctx):
+        lives=3
+        number=randint(1,10)
+        await ctx.send("Guess the number from `1 to 10` :zany_face:")
+        await ctx.send("Enter the guess only ex: `1`")
+        await ctx.send("BTW: You only have `30` seconds to guess so answer quickly!")
 
-                    checkWinner(winningConditions, mark)
-                    if gameOver == True:
-                        await ctx.send(mark + " wins!")
-                    elif count >= 9:
-                        gameOver = True
-                        await ctx.send("It's a tie!")
+        while lives !=-1:
 
-                    # switch turns
-                    if turn == player1:
-                        turn = player2
-                    elif turn == player2:
-                        turn = player1
-                else:
-                    await ctx.send("Be sure to choose an integer between 1 and 9 (inclusive) and an unmarked tile.")
-            else:
-                await ctx.send("It is not your turn.")
-        else:
-            await ctx.send("Please start a new game using the r!tictactoe command.")
+            if lives==0:
+                lives=lives-1
+                await ctx.send(f"Game Over!!! The number was {number}")
+                break
 
+            def check(m):
+                return m.author == ctx.author
+            try:
+                guess=await self.client.wait_for("message",timeout=30, check = check)
+            except asyncio.TimeoutError:
+                await ctx.send("Timeout")
 
-    
-
-    @tictactoe.error
-    async def tictactoe_error(ctx, error):
-        print(error)
-        if isinstance(error, commands.MissingRequiredArgument):
-            await ctx.send("Please mention 2 players for this command.")
-        elif isinstance(error, commands.BadArgument):
-            await ctx.send("Please make sure to mention/ping players (ie. <@688534433879556134>).")
-
-    @tttplace.error
-    async def place_error(ctx, error):
-        if isinstance(error, commands.MissingRequiredArgument):
-            await ctx.send("Please enter a position you would like to mark.")
-        elif isinstance(error, commands.BadArgument):
-            await ctx.send("Please make sure to enter an integer.")
-            
-
-    @commands.command(aliases=['end'])
-    async def tttend(self, ctx):
-        try:
-            # We need to declare them as global first
-            global count
-            global player1
-            global player2
-            global turn
-            global gameOver
-            
-            # Assign their initial value
-            count = 0
-            player1 = ""
-            player2 = ""
-            turn = ""
-            gameOver = True
-
-            # Now print your message or whatever you want
-            myEmbed = discord.Embed(title= "Reseted",description="To start a new game, use the  r!ttt command!",color=0x2ecc71)
-            await ctx.send(embed=myEmbed)
-        except:
-            await ctx.send("You\'re not in a game ;-;") 
-
-
+            if int(guess.content)>number:
+                lives=lives-1
+                await ctx.send(f"Your guess is **TOO BIG** , you have `{lives}` attempts left")
+            elif int(guess.content)<number:
+                lives=lives-1
+                await ctx.send(f"Your guess is **TOO SMALL** ,  you have `{lives}` attempts left")
+            elif int(guess.content)==number:
+                await ctx.send("Your guess is ***Correct*** :exploding_head: :exploding_head: :exploding_head: ")
+                break
 
     @commands.command(aliases=['coin', 'flip'])
     async def coinflip(self, ctx):
@@ -358,31 +122,7 @@ class Games(commands.Cog):
             await ctx.send("Guess can only be rock, paper or scissors.")
 
     
-    @commands.command(aliases=['hm'])
-    async def hangman(self, ctx, guess:str=None):
-        
-
-        if guess == None:
-            await ctx.send("How about add a letter after `r!hangman` next time?")
-            return
-        else:
-            player_id = ctx.author.id
-            hangman_instance = HangmanGame()
-            game_over, won = hangman_instance.run(player_id, guess)
-            if game_over:
-                game_over_message = ":/ You did not win."
-                if won:
-                    game_over_message = "Congrats you won!"
-
-                game_over_message = game_over_message + \
-                    " The word was %s" % hangman_instance.get_secret_word()
-
-                await hangman_instance.reset(player_id)
-                await ctx.send(game_over_message)
-
-            else:
-                await ctx.send("Progress: %s" % hangman_instance.get_progress_string())
-                await ctx.send("Guess so far: %s" % hangman_instance.get_guess_string())
+    
 
     @commands.command(name='connectfour', aliases=['c4', 'connect4'])
     async def connect4(self,ctx: commands.Context,opponent="",width=7,height=6):
@@ -416,7 +156,7 @@ class Games(commands.Cog):
             for row in range(width):
                 rowArr.append(s)
             board.append(rowArr)
-        def getDisplay():
+        def getDisplay(self):
             toDisplay = ""
             for y in range(height):
                 for x in range(width-1):
@@ -430,7 +170,7 @@ class Games(commands.Cog):
             em.title = f"{player2} challenged themselves to a game of Connect 4 \n(wow you're lonely)"
         else:
             em.title = f'{player2} challenged {player1} to a game of Connect 4'
-        em.description = f"{getDisplay()}"
+        em.description = f"{self.getDisplay()}"
         em.color = 0x444444
         em.add_field(name=f"{player1}", value=f"Type a number from 1-{width} to accept and place your first piece, or type 'decline' to refuse", inline=False)
         if resized:
@@ -452,7 +192,7 @@ class Games(commands.Cog):
                         em.title = f"{player2} challenged themselves to a game of Connect 4 (wow you're lonely)"
                     else:
                         em.title = f'{player2} challenged {player1} to a game of Connect 4'
-                    em.description = f"{getDisplay()}"
+                    em.description = f"{self.getDisplay()}"
                     em.color = 0x444444
                     em.add_field(name=f"{player1}", value="Challenge refused", inline=False)
                     await boardMessage.edit(embed=em)
@@ -475,7 +215,7 @@ class Games(commands.Cog):
                     em.title = f"{player2} challenged themselves to a game of Connect 4 (wow you're lonely)"
                 else:
                     em.title = f'{player2} challenged {player1} to a game of Connect 4'
-                em.description = f"{getDisplay()}"
+                em.description = f"{self.getDisplay()}"
                 em.color = 0x444444
                 em.add_field(name=f"{player1}", value="Game timed out", inline=False)
                 await boardMessage.edit(embed=em)
@@ -486,7 +226,7 @@ class Games(commands.Cog):
                     em.title = f"{player2} challenged themselves to a game of Connect 4 (wow you're lonely)"
                 else:
                     em.title = f'{player2} challenged {player1} to a game of Connect 4'
-                em.description = f"{getDisplay()}"
+                em.description = f"{self.getDisplay()}"
                 em.color = 0x444444
                 em.add_field(name=f"{player1}", value=f"Enter a valid number from 1-{width}", inline=False)
                 await boardMessage.edit(embed=em)
@@ -497,7 +237,7 @@ class Games(commands.Cog):
                     em.title = f"{player2} challenged themselves to a game of Connect 4 (wow you're lonely)"
                 else:
                     em.title = f'{player2} challenged {player1} to a game of Connect 4'
-                em.description = f"{getDisplay()}"
+                em.description = f"{self.getDisplay()}"
                 em.color = 0x444444
                 em.add_field(name=f"{player1}", value="Did not enter a valid number in 3 tries. Game ended.", inline=False)
                 await boardMessage.edit(embed=em)
@@ -593,7 +333,7 @@ class Games(commands.Cog):
             ################################
             em = discord.Embed()
             em.title = f'Connect 4'
-            em.description = f"{getDisplay()}"
+            em.description = f"{self.getDisplay()}"
             em.color = 0x444444
             em.add_field(name=f"Turn {turns}: {currentPlayer} turn", value=f"Enter a value from 1-{width}. You have 30 seconds to make a choice", inline=True)
             await boardMessage.edit(embed=em)
@@ -637,7 +377,7 @@ class Games(commands.Cog):
                 except ValueError:
                     em = discord.Embed()
                     em.title = f'Connect 4'
-                    em.description = f"{getDisplay()}"
+                    em.description = f"{self.getDisplay()}"
                     em.color = 0x444444
                     em.add_field(name=f"Turn {turns}: {currentPlayer}", value=f"Enter a valid number from 1-{width}", inline=False)
                     await boardMessage.edit(embed=em)
@@ -650,13 +390,13 @@ class Games(commands.Cog):
         if(winner==None):
             em = discord.Embed()
             em.title = f'Connect 4 - Tie, No Winners'
-            em.description = f"{getDisplay()}"
+            em.description = f"{self.getDisplay()}"
             em.color = 0x444444
             await boardMessage.edit(embed=em)
         elif(winner==player1):
             em = discord.Embed()
             em.title = f'Connect 4 - {player1} wins!'
-            em.description = f"{getDisplay()}"
+            em.description = f"{self.getDisplay()}"
             em.add_field(name="Reason:", value=f"{winningComment}", inline=False)
             if(player1==player2):
                 em.add_field(name="Also:", value=f"They won against themself", inline=False)
@@ -665,7 +405,7 @@ class Games(commands.Cog):
         elif(winner==player2):
             em = discord.Embed()
             em.title = f'Connect 4 - {player2} wins!'
-            em.description = f"{getDisplay()}"
+            em.description = f"{self.getDisplay()}"
             em.add_field(name="Reason:", value=f"{winningComment}", inline=False)
             if(player1==player2):
                 em.add_field(name="Also:", value=f"They won against themself", inline=False)
@@ -687,14 +427,14 @@ class Games(commands.Cog):
         # Remove challenge message
         await ctx.channel.delete_messages(await self.getMessages(ctx,1))
         # Game init
-        pawnwhite = "♟︎"
+        pawnwhite = "♙" 
         knightwhite = "♞"
         bishopwhite = "♝"
         rookwhite = "♜"
         queenwhite = "♛"
         kingwhite = "♚"
         whitepieces = (pawnwhite,knightwhite,bishopwhite,rookwhite,queenwhite,kingwhite)
-        pawnblack = "♙"
+        pawnblack = "♟︎"
         knightblack = "♘"
         bishopblack = "♗"
         rookblack = "♖"
@@ -945,7 +685,7 @@ class Games(commands.Cog):
         # Create Message
         em = discord.Embed()
         em.title = f'{player2} challenged {player1} to a game of chess'
-        em.description = f"{getDisplay()}"
+        em.description = f"{self.getDisplay()}"
         em.color = 0x444444
         em.add_field(name=f"{player1}", value=f"Type two coordinates (piece -> destination), or type 'decline' to refuse\nYou are playing white", inline=False)
         em.add_field(name="Example", value="a2 a3", inline=False)
@@ -960,7 +700,7 @@ class Games(commands.Cog):
                 em.title = f'{player2} challenged {player1} to a game of chess'
                 msg = await self.client.wait_for('message',check=lambda message: message.author.name == player1, timeout=30)
                 if(msg.content=='decline'):
-                    em.description = f"{getDisplay()}"
+                    em.description = f"{self.getDisplay()}"
                     em.add_field(name=f"{player1}", value="Challenge refused", inline=False)
                     await boardMessage.edit(embed=em)
                     return
@@ -976,7 +716,7 @@ class Games(commands.Cog):
                 turn += 1
                 movePiece(msg.content)
                 em.color = 0x00FF00
-                em.description = f"{getDisplay()}"
+                em.description = f"{self.getDisplay()}"
                 em.add_field(name=f"{otherPlayer}'s turn:", value=f"{gameMsg}", inline=False)
                 await boardMessage.edit(embed=em)
                 gameLoop = True
@@ -986,13 +726,13 @@ class Games(commands.Cog):
                 prevMove = msg.content
                 break;
             except asyncio.exceptions.TimeoutError:
-                em.description = f"{getDisplay()}"
+                em.description = f"{self.getDisplay()}"
                 em.color = 0xFF0000
                 em.add_field(name=f"{player1}", value="Game timed out", inline=False)
                 await boardMessage.edit(embed=em)
                 return
             if(player1badInput==3):
-                em.description = f"{getDisplay()}"
+                em.description = f"{self.getDisplay()}"
                 em.color = 0xFF0000
                 em.add_field(name=f"{player1}", value="Did not enter a valid move in 3 tries. Game ended.", inline=False)
                 await boardMessage.edit(embed=em)
@@ -1007,7 +747,7 @@ class Games(commands.Cog):
                 gameMsg = checkPlayerMove(msg.content,castlingDict)
                 if(msg.content[0:4]=="quit"):
                     em.color = 0x770000
-                    em.description = f"{getDisplay()}"
+                    em.description = f"{self.getDisplay()}"
                     em.add_field(name=f"{currentPlayer} Quits", value=f"{otherPlayer} wins!", inline=False)
                     await boardMessage.edit(embed=em)
                     return
@@ -1015,11 +755,11 @@ class Games(commands.Cog):
                     coords = msg.content.split(" ")
                     if(inCheck(parseMove(coords[0]),parseMove(coords[1]))):
                         em.color = 0xFF0000
-                        em.description = f"{getDisplay()}"
+                        em.description = f"{self.getDisplay()}"
                         em.add_field(name="Error", value=f"Can not move into check", inline=False)
                     else:
                         em.color = 0x770000
-                        em.description = f"{getDisplay()}"
+                        em.description = f"{self.getDisplay()}"
                         em.add_field(name="Invalid Move", value=f"{gameMsg}", inline=False)
                     await boardMessage.edit(embed=em)
                     continue
@@ -1029,14 +769,14 @@ class Games(commands.Cog):
                     else:
                         player2badInput+=1
                     em.color = 0x770000
-                    em.description = f"{getDisplay()}"
+                    em.description = f"{self.getDisplay()}"
                     em.add_field(name="Invalid Move", value=f"{gameMsg}", inline=False)
                     await boardMessage.edit(embed=em)
                     continue
                 await ctx.channel.delete_messages(await self.getMessages(ctx,1))
                 turn += 1
                 movePiece(msg.content)
-                em.description = f"{getDisplay()}"
+                em.description = f"{self.getDisplay()}"
                 em.color = 0x00FF00
                 em.add_field(name=f"{otherPlayer}'s turn:", value=f"{gameMsg}", inline=False)
                 if(currentPlayerId == 1):
@@ -1048,19 +788,19 @@ class Games(commands.Cog):
                 prevMove = msg.content
                 await boardMessage.edit(embed=em)
             except asyncio.exceptions.TimeoutError:
-                em.description = f"{getDisplay()}"
+                em.description = f"{self.getDisplay()}"
                 em.color = 0x770000
                 em.add_field(name=f"{currentPlayer} Forfeit", value="Didn't make a move within 30 seconds", inline=False)
                 await boardMessage.edit(embed=em)
                 return
             if(player1badInput==3):
-                em.description = f"{getDisplay()}"
+                em.description = f"{self.getDisplay()}"
                 em.color = 0x770000
                 em.add_field(name=f"{player1} Forfeit", value="Did not enter a valid move in 3 tries. Game ended.", inline=False)
                 await boardMessage.edit(embed=em)
                 return
             if(player2badInput==3):
-                em.description = f"{getDisplay()}"
+                em.description = f"{self.getDisplay()}"
                 em.color = 0x770000
                 em.add_field(name=f"{player2} Forfeit", value="Did not enter a valid move in 3 tries. Game ended.", inline=False)
                 await boardMessage.edit(embed=em)
@@ -1070,7 +810,439 @@ class Games(commands.Cog):
        #Finish castling (move the rook)
        #check
 
+    @commands.command(aliases = ['t'])
+    @commands.cooldown(3, 30, commands.BucketType.channel)
+
+    async def trivia(self, ctx):
+        data = requests.get(f'https://opentdb.com/api.php?amount=1').json()
+        results = data['results'][0]
+        embed = discord.Embed(
+            title = ":question:  Trivia",
+            description = f"Category: {results['category']} | Difficulty: {results['difficulty'].capitalize()}",
+            color = ctx.author.color
+        )
+        embed2 = embed
+        def decode(answers):
+            new = []
+            for i in answers:
+                new.append(html.unescape(i))
+            return new
+        if results['type'] == 'boolean':
+            if results['correct_answer'] == "False":
+                answers = results['incorrect_answers'] + [results['correct_answer']]
+            else:
+                answers = [results['correct_answer']] + results['incorrect_answers']
+            answers = decode(answers)
+            embed.add_field(name = html.unescape(results['question']), value = f"True or False")
+            available_commands = ['true', 'false', 't', 'f']
+        else:
+            pos = random.randint(0, 3)
+            if pos == 3:
+                answers = results['incorrect_answers'] + [results['correct_answer']]
+            else:
+                answers = results['incorrect_answers'][0:pos] + [results['correct_answer']] + results['incorrect_answers'][pos:]
+            answers = decode(answers)
+            embed.add_field(name = html.unescape(results['question']), value = f"A) {answers[0]}\nB) {answers[1]}\nC) {answers[2]}\nD) {answers[3]}")
+            available_commands = ['a', 'b', 'c', 'd'] + [x.lower() for x in answers]
+        question = await ctx.send(embed = embed)
+        correct_answer = html.unescape(results['correct_answer'])
+        def check(m):
+            return m.channel == ctx.channel and m.content.lower() in available_commands and not m.author.bot
+        try:
+            msg = await self.client.wait_for('message', timeout = 30.0, check = check)
+        except asyncio.TimeoutError:
+            return
+        correct = False
+        if results['type'] == 'boolean':
+            if msg.content.lower() == correct_answer.lower() or msg.content.lower() == correct_answer.lower()[0]:
+                correct = True
+            answer_string = f"The answer was **{correct_answer}**"
+        else:
+            letters = ['a', 'b', 'c', 'd']
+            if msg.content.lower() == correct_answer.lower() or msg.content.lower() == letters[pos]:
+                correct = True
+            answer_string = f"The answer was **{letters[pos].upper()}) {correct_answer}**"
+        if correct:
+            name = ":white_check_mark:  Correct"
+        else:
+            name = ":x:  Incorrect"
+        embed2.clear_fields()
+        embed2.add_field(name = name, value = answer_string)
+        await question.edit(embed = embed2)
+
+    @trivia.error
+    async def trivia_error(self, ctx, error):
+        await ctx.send(error)
+
+    #@commands.max_concurrency(1, commands.BucketType.channel, wait = False)
+    @commands.command(aliases = ['hang', 'hm'])
+    async def hangman(self, ctx):
+       
+        with open('words3.txt') as f:
+            word = random.choice(f.readlines()).rstrip("\n")
+        hang = [
+            "**```    ____",
+            "   |    |",
+            "   |    ",
+            "   |   ",
+            "   |    ",
+            "   |   ",
+            "___|__________```**"
+        ]
+        empty = '\n'.join(hang)
+        man = [['@', 2], [' |', 3], ['\\', 3, 7], ['/', 3], ['|', 4], ['/', 5], [' \\', 5]]
+        string = [':blue_square:' for i in word]
+        embed = discord.Embed(
+            title = "Hangman",
+            color = ctx.author.color,
+            description = f"Type a letter in chat to guess.\n\n**{' '.join(string)}**\n\n{empty}",
+        )
+        incorrect = 0
+        original = await ctx.send(embed = embed)
+        guessed = []
+        incorrect_guessed = []
+        already_guessed = None
+        def check(m):
+            return m.channel == ctx.channel and m.content.isalpha() and len(m.content) == 1 and m.author == ctx.author
+        while incorrect < len(man) and ':blue_square:' in string:
+            try:
+                msg = await self.client.wait_for('message', timeout = 120.0, check = check)
+                letter = msg.content.lower()
+            except asyncio.TimeoutError:
+                await ctx.send("Game timed out.")
+                return
+            if already_guessed:
+                await already_guessed.delete()
+                already_guessed = None
+            if letter in guessed:
+                already_guessed = await ctx.send("You have already guessed that letter.")
+                await msg.delete()
+                continue
+            guessed += letter
+            if letter not in word:
+                incorrect_guessed += letter
+                if embed.fields:
+                    embed.set_field_at(0, name = "Incorrect letters:", value = ', '.join(incorrect_guessed))
+                else:
+                    embed.add_field(name = "Incorrect letters:", value = ', '.join(incorrect_guessed))
+                part = man[incorrect]
+                if len(part) > 2:
+                    hang[part[1]] = hang[part[1]][0:part[2]] + part[0] + hang[part[1]][part[2] + 1:]
+                else:
+                    hang[part[1]] += part[0]
+                incorrect += 1
+            else:
+                for j in range(len(word)):
+                    if letter  == word[j]:
+                        string[j] = word[j]
+            new = '\n'.join(hang)
+            if ':blue_square:' not in string:
+                embed.description = f"You guessed the word!\n\n**{' '.join(string)}**\n\n{new}"
+            elif incorrect == len(man):
+                embed.description = f"You've been hanged! The word was \n\n**{' '.join([k for k in word])}**\n\n{new}"
+            else:
+                embed.description = f"Type a letter in chat to guess.\n\n**{' '.join(string)}**\n\n{new}"
+            await msg.delete()
+            await original.edit(embed = embed)
+
+    @hangman.error
+    async def hangman_error(self, ctx, error):
+        await ctx.send(error)
+
+    @commands.command(aliases = ['ttt'])
+    async def tictactoe(self, ctx, *, opponent: discord.Member):
+       
+        if opponent.id == ctx.author.id:
+            await ctx.send("You played yourself. Oh wait, you can't.")
+            return
+        if opponent.bot:
+            await ctx.send("You played a bot. Oh wait, you can't.")
+            return
+        await ctx.send('Tictactoe has started. Type the number of the square you want to go in. Type "end_game" to end the game.')
+        player1 = ctx.author
+        player2 = opponent
+
+        commands = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'end_game']
+
+        def check(m):
+            return m.channel == ctx.channel and (m.content in commands) and not m.author.bot
+
+        def endgame(board):
+            for k in range(3):
+                if board[k][0] == board[k][1] and board[k][1] == board[k][2]:
+                    if board[k][0] > 0:
+                        return board[k][0]
+                elif board[0][k] == board[1][k] and board[1][k] == board[2][k]:
+                    if board[0][k] > 0:
+                        return board[0][k]
+            if (board[0][0] == board[1][1] and board[1][1] == board[2][2]) or (board[0][2] == board[1][1] and board[1][1] == board[2][0]):
+                if board[1][1] > 0:
+                    return board[1][1]
+            counter = 0
+            for l in range(3):
+                for m in range(3):
+                    if board[l][m] == 0:
+                        counter += 1
+            if counter == 0:
+                return 3
+            else:
+                return 0
+
+        board = [[0] * 3 for n in range(3)]
+        end = False
+        player = 1
+        while not end:
+            out = '```'
+            for i in range(3):
+                for j in range(3):
+                    out += ' '
+                    if board[i][j] == 0:
+                        out += str(i * 3 + j + 1)
+                    elif board[i][j] == 1:
+                        out += 'X'
+                    elif board[i][j] == 2:
+                        out += 'O'
+                    out += ' '
+                    if j != 2:
+                        out += '|'
+                out += '\n'
+                if i != 2:
+                    out += '---+---+---\n'
+            out += '```'
+            await ctx.send(out)
+            result = endgame(board)
+            if result != 0:
+                if result == 1:
+                    await ctx.send(f'{player1.display_name} wins!')
+                    return
+                elif result == 2:
+                    await ctx.send(f'{player2.display_name} wins!')
+                    return
+                else:
+                    await ctx.send('Tie!')
+
+                    return
+            if player == 1:
+                await ctx.send("{0}'s turn".format(player1.display_name))
+            else:
+                await ctx.send("{0}'s turn".format(player2.display_name))
+            valid = False
+            while not valid:
+                try:
+                    msg = await self.client.wait_for('message', timeout = 300.0, check = check)
+                except asyncio.TimeoutError:
+                    await ctx.send('Game timed out.')
+                    return
+                if (player == 1 and msg.author == player1) or (player == 2 and msg.author == player2):
+                    if msg.content == 'end_game':
+                        await ctx.send('Game ended.')
+                        return
+                    input = int(msg.content)
+                    a = int((input - 1) / 3)
+                    b = int((input - 1) % 3)
+                    if board[a][b] == 0:
+                        board[a][b] = player
+                        player = 3 - player
+                        valid = True
+	
+    @tictactoe.error
+    async def tictactoe_error(self, ctx, error):
+        print(error)
+        await ctx.send('Please follow format: `r!tictactoe {opponent}`')
+
+    @commands.command(aliases = ['2048', 'twenty48'])
+    @commands.max_concurrency(1, commands.BucketType.channel, wait = False)
+    async def twentyfortyeight(self, ctx):
+
+        available_commands = ['w', 'a', 's', 'd', 'end_game']
+        await ctx.send('2048 has started. Use WASD keys to move. Type "end_game" to end the game.')
         
+        def moveNumbers(input, board):
+            up = False
+            down = False
+            left = False
+            right = False
+            alreadyMoved = [[False] * 4 for n in range(4)]
+            if input == 'w':
+                up = True
+            elif input == 's':
+                down = True
+            elif input == 'a':
+                left = True
+            else:
+                right = True
+            for k in range(4):
+                for l in range(4):
+                    stop = False
+                    limit = 0
+                    if down or right:
+                        limit = 3
+                    a = 0
+                    b = 0
+                    if up:
+                        a = l
+                        b = k
+                    elif down:
+                        a = 3 - l
+                        b = k
+                    elif left:
+                        a = k
+                        b = l
+                    else:
+                        a = k
+                        b = 3 - l
+                    while not stop:
+                        if up or down:
+                            c = a - 1
+                            if down:
+                                c = a + 1
+                            if a == limit:
+                                stop = True
+                            else:
+                                if board[c][b] == 0:
+                                    board[c][b] = board[a][b]
+                                    board[a][b] = 0
+                                    a = c
+                                elif board[c][b] == board[a][b] and alreadyMoved[c][b] != True:
+                                    board[c][b] = board[c][b] * 2
+                                    board[a][b] = 0
+                                    alreadyMoved[c][b] = True
+                                    stop = True
+                                else:
+                                    stop = True
+                        else:
+                            c = b - 1
+                            if right:
+                                c = b + 1
+                            if b == limit:
+                                stop = True
+                            else:
+                                if board[a][c] == 0:
+                                    board[a][c] = board[a][b]
+                                    board[a][b] = 0
+                                    b = c
+                                elif board[a][c] == board[a][b] and alreadyMoved[a][c] != True:
+                                    board[a][c] = board[a][c] * 2
+                                    board[a][b] = 0
+                                    alreadyMoved[a][c] = True
+                                    stop = True
+                                else:
+                                    stop = True
+        
+        end = False
+        win = False
+        start = True
+        board = [[0] * 4 for n in range(4)]
+        empty2 = 0
+        empty = 0
+        emptyX = []
+        emptyY = []
+        input = ''
+        counter = 0
+        while not end:
+            canMove = False
+            empty2 = 0
+            if start:
+                randX = random.randint(0, 3)
+                randY = random.randint(0, 3)
+                board[randX][randY] = 2
+            out = '``` -------------------\n'
+            for i in range(4):
+                for j in range(4):
+                    if i == 0:
+                        if j == 0:
+                            if board[i][j] == board[i + 1][j] or board[i][j] == board[i][j + 1]:
+                                canMove = True
+                        elif j == 3:
+                            if board[i][j] == board[i + 1][j] or board[i][j] == board[i][j - 1]:
+                                    canMove = True
+                        else:
+                            if board[i][j] == board[i + 1][j] or board[i][j] == board[i][j + 1] or board[i][j] == board[i][j - 1]:
+                                    canMove = True
+                    elif i == 3:
+                        if j == 0:
+                            if board[i][j] == board[i - 1][j] or board[i][j] == board[i][j + 1]:
+                                canMove = True
+                        elif j == 3:
+                            if board[i][j] == board[i - 1][j] or board[i][j] == board[i][j - 1]:
+                                canMove = True
+                        else:
+                            if board[i][j] == board[i][j + 1] or board[i][j] == board[i - 1][j] or board[i][j] == board[i][j - 1]:
+                                canMove = True
+                    else:
+                        if j == 0:
+                            if board[i][j] == board[i - 1][j] or board[i][j] == board[i][j + 1] or board[i][j] == board[i + 1][j]:
+                                canMove = True
+                        elif j == 3:
+                            if board[i][j] == board[i - 1][j] or board[i][j] == board[i][j - 1] or board[i][j] == board[i + 1][j]:
+                                canMove = True
+                        else:
+                            if board[i][j] == board[i][j + 1] or board[i][j] == board[i - 1][j] or board[i][j] == board[i][j - 1] or board[i][j] == board[i + 1][j]:
+                                canMove = True
+                    if board[i][j] == 2048:
+                        win = True
+                    if board[i][j] == 0:
+                        empty2 += 1
+                        out += '|    '
+                    elif board[i][j] > 0 and board[i][j] < 10:
+                        out += '|  ' + str(board[i][j]) + ' '
+                    elif board[i][j] >= 10 and board[i][j] < 100:
+                        out += '| ' + str(board[i][j]) + ' '
+                    elif board[i][j] >= 100 and board[i][j] < 1000:
+                        out += '| ' + str(board[i][j])
+                    elif board[i][j] >= 1000 and board[i][j] < 10000:
+                        out += '|' + str(board[i][j])
+                out += '|\n'
+                if i != 3:
+                    out += '|----+----+----+----|\n'
+            out += ' -------------------```'
+            if start:
+                msg2 = await ctx.send(out)
+            else:
+                await msg2.edit(content = out)
+            if win:
+                await ctx.send('You won!')
+
+                return
+            elif empty2 == 0 and not canMove:
+
+                return
+            valid = False
+            while not valid:
+                try:
+                    msg = await self.client.wait_for('message', timeout = 300.0)
+                except asyncio.TimeoutError:
+                    await ctx.send('Game timed out.')
+                    return
+                if msg.channel == ctx.channel and msg.author == ctx.author:
+                    if msg.content in available_commands:
+                        content = msg.content
+                        if content == 'end_game':
+                            await ctx.send('Game ended.')
+                            return
+                        valid = True
+                    await msg.delete()
+            board2 = [row[:] for row in board]
+            moveNumbers(content, board)
+            for k in range(4):
+                for l in range(4):
+                    if board[k][l] == 0:
+                        empty += 1
+                        emptyX.append(k)
+                        emptyY.append(l)
+
+            if board != board2 and empty != 0:
+                pos = random.randint(0, empty - 1)
+                board[emptyX[pos]][emptyY[pos]] = 2 + (random.randint(0, 1) * 2)
+                counter += 1
+            empty = 0
+            emptyX = []
+            emptyY = []
+            start = False
+
+    @twentyfortyeight.error
+    async def twentyfortyeight_error(self, ctx, error):
+        await ctx.send(error)
 
 
 

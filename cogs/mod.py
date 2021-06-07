@@ -45,7 +45,7 @@ class Moderation(commands.Cog):
             await ctx.send("I don't have the perms to do this!")
 
 
-    @commands.command()
+    @commands.command(aliases=['remrole'])
     @commands.has_permissions(manage_roles=True)
     async def removerole(self, ctx, user : discord.Member, *, role : discord.Role):
         if role.position > user.top_role.position:
@@ -223,54 +223,7 @@ class Moderation(commands.Cog):
         if not self.client.has_permissions(ban_members=True):
             await ctx.send("I don't have the perms to do this!")
 
-    @commands.command()
-    @commands.has_permissions(administrator=True)
-    async def warn(self, ctx, member: discord.Member=None, *, reason=None):
-        if member is None:
-            return await ctx.send("The provided member could not be found or you forgot to provide one.")
-            
-        if reason is None:
-            return await ctx.send("Please provide a reason for warning this user.")
-
-        try:
-            first_warning = False
-            self.client.warnings[ctx.guild.id][member.id][0] += 1
-            self.client.warnings[ctx.guild.id][member.id][1].append((ctx.author.id, reason))
-
-        except KeyError:
-            first_warning = True
-            self.client.warnings[ctx.guild.id][member.id] = [1, [(ctx.author.id, reason)]]
-
-        count = self.client.warnings[ctx.guild.id][member.id][0]
-
-        async with aiofiles.open(f"warns/{ctx.guild.id}.txt", mode="a") as file:
-            await file.write(f"{member.id} {ctx.author.id} {reason}\n")
-
-        await ctx.send(f"Gave one warning to **{member.mention}**. They now have **{count}** warnings")
-
-        if not ctx.author.has_permissions(administrator=True):
-            await ctx.send("You don't have the perms to do this!")
-        if not self.client.has_permissions(administrator=True):
-            await ctx.send("I don't have the perms to do this!")
-
-    @commands.command()
-    async def warnings(self, ctx, member: discord.Member=None):
-        if member is None:
-            return await ctx.send("The provided member could not be found or you forgot to provide one.")
-        
-        embed = discord.Embed(title=f"Displaying Warnings for {member.name}", description="", colour=discord.Colour.red())
-        try:
-            i = 1
-            for admin_id, reason in self.client.warnings[ctx.guild.id][member.id][1]:
-                admin = ctx.guild.get_member(admin_id)
-                embed.description += f"**Warning {i}** given by: {admin.mention} for: *'{reason}'*.\n"
-                i += 1
-
-            await ctx.send(embed=embed)
-
-        except KeyError: # no warnings
-            await ctx.send("This user has no warnings.")
-
+    
     @commands.command()
     @commands.is_owner()
     async def nuke(self, ctx):

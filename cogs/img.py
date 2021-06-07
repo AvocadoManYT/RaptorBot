@@ -206,7 +206,7 @@ class Images(commands.Cog):
         draw = ImageDraw.Draw(img)
         font = ImageFont.truetype("JosefinSans-Regular.ttf", 24)
 
-        draw.text((100,100), text, (0,0,0), font = font)
+        draw.text((100,100), text, (0,17,0), font = font)
 
         img.save("images/text.jpeg")
 

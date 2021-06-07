@@ -1,7 +1,7 @@
 import discord
 import json
 import datetime
-from main import restart_reason as rr, prefix as pre, prefixes
+from main import prefix as pre, prefixes, owners
 from datetime import datetime
 from discord.ext import commands
 import asyncio
@@ -13,7 +13,7 @@ import inspect
 
 sniped_messages = {}
 
-class Utils(commands.Cog):
+class Utility(commands.Cog):
     """ Category for utility commands """
     def read_jsona(filename):
         with open(f"{filename}.json", "r") as file:
@@ -26,72 +26,104 @@ class Utils(commands.Cog):
     # events
     @commands.Cog.listener()
     async def on_ready(self):
-        print('misc cog is ready.')
+        print('Utils cog is ready.')
 
     # commands
 
-    @commands.command(help="Sends the links where you can vote for me!")
-    async def vote(self, ctx):
-        vtlk = discord.Embed(title = "Vote for Me!", description ="Vote for me by using these links!", color = ctx.author.color)
-        vtlk.add_field(name = "Top.gg", value = "[Click Here](https://top.gg/bot/829836500970504213/vote)")
-        vtlk.add_field(name = "Discord Bot List", value = "[Click Here](https://discordbotlist.com/bots/raptor/upvote)")
-        await ctx.send(embed = vtlk)
+    @commands.command()
+    async def feedback(self, ctx):
+        await ctx.send("Let's start with this feedback session! Answer these questions within 20 seconds!")
 
-    
+        questions = ["How much out of ten do you rate me? (i.e. 7/10)", 
+                    "What is your feedback about me?",
+                    ]
 
-    @commands.command(help="Sends the links where you can review me!")
-    async def review(self, ctx):
-        vtlk = discord.Embed(title = "Review Me!", description ="Review me by using these links!", color = ctx.author.color)
-        vtlk.add_field(name = "Top.gg", value = "[Click Here](https://top.gg/bot/829836500970504213)")
-        vtlk.add_field(name = "Discord Bot List", value = "[Click Here](https://discordbotlist.com/bots/raptor)")
-        await ctx.send(embed = vtlk)
+        answers = []
 
-    @commands.command(help="Sends the link for the support server")
-    async def support(self, ctx):
-        em = discord.Embed(title = "Support Server", description = "[Click Here](https://discord.gg/CwAAxx7YyJ)", color = ctx.author.color)
-        await ctx.send(embed = em)
-    
-    @commands.command(help="Sends the link to invite Raptor!")
-    async def invite(self, ctx):
-        em = discord.Embed(title = "Invite Me!", description = "[Click Here](https://discord.com/api/oauth2/authorize?client_id=829836500970504213&permissions=4260887158&redirect_uri=https%3A%2F%2Fraptor-dbot.glitch.me%2Fthx.html&response_type=code&scope=bot%20applications.commands%20identify)", color = ctx.author.color)
-        em.set_footer(text = f"Requested by {ctx.author}", icon_url = ctx.author.avatar_url)
-        await ctx.reply(embed = em)
+        
+        def check(m):
+            return m.author == ctx.author and m.channel == ctx.channel
 
-    @commands.command(help=f"Shows how long Raptor has been online for and other stuff.")
-    async def uptime(self, ctx):
-        delta_uptime = datetime.utcnow() - self.client.launch_time
-        hours, remainder = divmod(int(delta_uptime.total_seconds()), 3600)
-        minutes, seconds = divmod(remainder, 60)
-        days, hours = divmod(hours, 24)
-        em = discord.Embed(
-            title = "Raptor",
-            description = "Raptor the bot's uptime command!",
-            color = ctx.author.color
-        )
-        em.add_field(name = "Uptime", value = f"```I have been online for {days} days, {hours} hours, {minutes} minutes and {seconds} seconds!```")
-        em.add_field(name = "Reason For Last Restart", value = f"```{rr}```")
-        await ctx.send(embed = em)
+        for i in questions:
+            await ctx.send(i)
+
+            try:
+                msg = await self.client.wait_for('message', timeout=20.0, check=check)
+            except asyncio.TimeoutError:
+                await ctx.send('You didn\'t answer in time, please be quicker next time!')
+                return
+            else:
+                answers.append(msg.content)
+       
 
 
-    @commands.command(help="Sends the link to my website!")
-    async def website(self, ctx):
-        em = discord.Embed(title="Go check my website out!", description = "[Click Here](https://raptor-dbot.glitch.me/)", color = ctx.author.color)
-        await ctx.send(embed = em)
+        channel = self.client.get_channel(850042687066734600)
+
+        
+
+        rate = answers[0]
+
+        feedback = answers[1]
+
+        await ctx.send(f"Thanks for sending feedback!")
+
+
+        embed = discord.Embed(title = "New Feedback!", description = f"Sent by: <@{ctx.author.id}>", color = ctx.author.color)
+
+
+
+        embed.add_field(name=f'Rating:', value=rate)
+        embed.add_field(name=f"Feedback:", value=feedback)
+
+
+        await channel.send(embed = embed)
 
     @commands.command()
-    async def avm(self, ctx):
-        em = discord.Embed(
-            title = "Join Raptor's owner's server; Avocado Man's Community or AVM!",
-            description = ":pray: Pls Join",
-            url = "https://discord.gg/k36haH6m9T",
-            timestamp = datetime.now(),
-            color = ctx.author.color
-        )
-        await ctx.send(embed = em)
+    async def suggest(self, ctx):
+        await ctx.send("Let's start with this seggestion session! Answer these questions within 30 seconds!")
 
-    @commands.Cog.listener()
-    async def on_ready(self):
-        print('Utils cog is ready.')
+        questions = ["Tell me your suggestion"
+                    ]
+
+        answers = []
+
+        
+        def check(m):
+            return m.author == ctx.author and m.channel == ctx.channel
+
+        for i in questions:
+            await ctx.send(i)
+
+            try:
+                msg = await self.client.wait_for('message', timeout=30.0, check=check)
+            except asyncio.TimeoutError:
+                await ctx.send('You didn\'t answer in time, please be quicker next time!')
+                return
+            else:
+                answers.append(msg.content)
+       
+
+
+        channel = self.client.get_channel(850042687066734600)
+
+        
+
+        suggest = answers[0]
+
+
+
+        await ctx.send(f"Thanks for sending feedback! If we use it, we will be sure to credit you!")
+
+
+        embed = discord.Embed(title = "New Suggestion!", description = f"Sent by: <@{ctx.author.id}>", color = ctx.author.color)
+
+
+
+        embed.add_field(name=f'Suggestion:', value=suggest)
+
+
+
+        await channel.send(embed = embed)
 
     @commands.Cog.listener()
     async def on_message_delete(self, message):
@@ -190,27 +222,34 @@ class Utils(commands.Cog):
     async def ping(self, ctx, member:discord.Member=None):
         if member == None:
             member = ctx.author
-        em = discord.Embed(title="Pong! 🏓", description=f"{round(self.client.latency * 1000)}ms" , color = discord.Colour.dark_green())
-        await ctx.send(embed = em)
+        em1 = discord.Embed(title = "<a:8104LoadingEmote:851517649389486180>", color = ctx.author.color)
+        em = discord.Embed(title="Pong! 🏓", description=f"{round(self.client.latency * 1000)}ms" , color = ctx.author.color)
+        msg = await ctx.send(embed = em1)
+        await asyncio.sleep(5)
+        await msg.edit(embed = em)
 
     
 
     @commands.command(help="Dm's a person if their dms are open.")
     @commands.cooldown(1, 60, commands.BucketType.user)
     async def dm(self, ctx, user_id=None, *, msg=None):
-        if user_id != None and msg != None:
-            try:
-                target = await self.client.fetch_user(user_id)
-                await target.send(msg)
+        if ctx.author.id in owners:
+            if user_id != None and msg != None:
+                try:
+                    target = await self.client.fetch_user(user_id)
+                    await target.send(msg)
 
-                await ctx.channel.send("'" + msg + "' sent to: " + target.name)
+                    await ctx.channel.send("'" + msg + "' sent to: " + target.name)
 
-            except:
-                await ctx.channel.send("Couldn't dm the given user.")
+                except:
+                    await ctx.channel.send("Couldn't dm the given user.")
+            else:
+                await ctx.channel.send("You didn't provide a user's id and/or a message.")
+        else:
+            await ctx.send("You're not my owner")
             
 
-        else:
-            await ctx.channel.send("You didn't provide a user's id and/or a message.")
+       
 
 
     @commands.command(help="Change other people\'s nickname.", aliases=['cnick','cname','cnewname'])
@@ -398,11 +437,20 @@ class Utils(commands.Cog):
 
     @commands.command(aliases=['afk', 'Afk', 'aFk', 'afK','AFk', 'aFK', 'AfK'])
     async def AFK(self, ctx, *, reason=None):
+        cn = ctx.author.display_name
         if reason == None:
             reason2 = 'I set your AFK \n Be sure to remove your afk with r!remafk or r!removeafk when you come back!'
             reason = ''
+            try:
+                await ctx.author.edit(nick=f"[AFK] {cn}")
+            except:
+                pass
         else:
             reason2 = f'I set your AFK, status: {reason} \n Be sure to remove your afk with r!remafk or r!removeafk when you come back!'
+            try:
+                await ctx.author.edit(nick=f"[AFK] {cn}")
+            except:
+                pass
         with open("afk.json", "r") as f:
             data = json.load(f)
         if str(ctx.author.id) in list(data[str(ctx.guild.id)]['AFK']):
@@ -572,7 +620,7 @@ class Utils(commands.Cog):
 
     @commands.command(aliases=['gc', 'getcode'])
     async def get_code(self, ctx, *, cmd):
-        owners = [801234598334955530]
+        owners = [801234598334955530, 814226043924643880]
         try:
             if ctx.author.id in owners:
                 command = self.client.get_command(cmd)
@@ -584,6 +632,8 @@ class Utils(commands.Cog):
         except:
             await ctx.send("Either that is not a command or the code it too long to display.")
 
+    
+
     @commands.command(aliases=['remafk'])
     async def removeafk(self, ctx):
         message = ctx
@@ -593,8 +643,12 @@ class Utils(commands.Cog):
             if str(message.author.id) in list(data[str(message.guild.id)]['AFK']):
                 data[str(message.guild.id)]["AFK"].pop(str(message.author.id))
                 await message.channel.send(f'Welcome Back, I removed your AFK!')
+                try:
+                    await ctx.author.edit(nick=f"{ctx.author.name}")
+                except:
+                    pass
             else:
-                await ctx.send("You\'re not in afk :/")
+                await ctx.send("You\'re not afk :/")
         with open("afk.json", "w") as f:
             json.dump(data, f, indent=4)
 
@@ -610,4 +664,4 @@ class Utils(commands.Cog):
         await ctx.send(embed = em)
 
 def setup(client):
-    client.add_cog(Utils(client))
+    client.add_cog(Utility(client))

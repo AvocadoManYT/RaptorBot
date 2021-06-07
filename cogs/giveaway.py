@@ -14,7 +14,7 @@ class Giveaway(commands.Cog):
     # events
     @commands.Cog.listener()
     async def on_ready(self):
-        print('Gaw cog is ready.')
+        print('Giveaway cog is online.')
 
     # commands
     
