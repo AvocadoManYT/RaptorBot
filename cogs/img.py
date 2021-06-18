@@ -13,13 +13,15 @@ from discord.ext import commands
 import PIL
 from PIL import Image, ImageFont, ImageDraw, ImageFilter
 from io import BytesIO
-
+err_color = discord.Color.red()
+color = 0x0da2ff
 
 class Images(commands.Cog):
     """ Category for image commands """
 
     def __init__(self, client):
         self.client = client
+        self.ses = aiohttp.ClientSession()
         
 
     # events
@@ -28,6 +30,7 @@ class Images(commands.Cog):
         print('Img cog is ready.')
 
     # commands
+    
 
     @commands.command()
     async def wanted(self, ctx, user : discord.Member = None):
@@ -49,6 +52,25 @@ class Images(commands.Cog):
         await ctx.send(file = discord.File("images/profile.jpg"))
 
     @commands.command()
+    async def amogus(self, ctx, user : discord.Member = None):
+        if user == None:
+            user = ctx.author
+
+        wanted = Image.open("images/amogu.png")
+        
+        asset = user.avatar_url_as(size = 128)
+
+        data = BytesIO(await asset.read())
+
+        pfp = Image.open(data)
+        pfp = pfp.resize((48,48))
+
+        wanted.paste(pfp, (246, 310))
+
+        wanted.save("images/amog.png")
+        await ctx.send(file = discord.File("images/amog.png"))
+
+    @commands.command()
     async def rip(self, ctx, member:discord.Member=None):
         if member == None:
             member = ctx.author
@@ -67,99 +89,7 @@ class Images(commands.Cog):
         rip.save('images/prip.jpg')
 
         await ctx.send(file = discord.File('images/prip.jpg'))
-    
-    
 
-    @commands.command(name='radial',aliases=['radialblur','blur','funny'])
-    async def radial(self, ctx: commands.Context,help="",amount="10"):
-        img,amount,successful = await self.getImage(ctx,"radial",help,amount)
-        if not successful:
-            if(amount==0): #Error command
-                em = discord.Embed()
-                em.title = f'Error when running command'
-                em.description = f"Error: {img}."
-                em.color = 0xEE0000
-                await ctx.send(embed=em)
-                return
-            else: #Help Command
-                em = discord.Embed()
-                em.title = f'Usage: /radial [img|imgURL] [amount]'
-                em.description = f'Adds radial blur to the image attached, url in the message, or the image attached before the command by [amount] from 1 to 50'
-                em.add_field(name="Aliases", value="/blur /radialblur /funny", inline=False)
-                em.add_field(name="Examples", value="/radialblur https://imgur.com/a/wUChw7w | /blur (imageAttachment) 30", inline=False)
-                em.color = 0x22BBFF
-                await ctx.send(embed=em)
-                return()
-        await ctx.send("Processing... (This may take a while)")
-        toDelete = await self.getMessages(ctx,1)
-        # Processing
-        img = np.array(img) #convert PIL image to Numpy (CV2 works with numpy BRG arrays)
-        # Convert RGB to BGR 
-        img = cv.cvtColor(np.array(img), cv.COLOR_RGB2BGR)
-        w, h = img.shape[:2]
-        # Radial Blur
-        center_x = w / 2
-        center_y = h / 2
-        blur = amount/1000
-        iterations = 5
-        growMapx = np.tile(np.arange(h) + ((np.arange(h) - center_x)*blur), (w, 1)).astype(np.float32)
-        shrinkMapx = np.tile(np.arange(h) - ((np.arange(h) - center_x)*blur), (w, 1)).astype(np.float32)
-        growMapy = np.tile(np.arange(w) + ((np.arange(w) - center_y)*blur), (h, 1)).transpose().astype(np.float32)
-        shrinkMapy = np.tile(np.arange(w) - ((np.arange(w) - center_y)*blur), (h, 1)).transpose().astype(np.float32)
-
-        for i in range(iterations):
-            tmp1 = cv.remap(img, growMapx, growMapy, cv.INTER_LINEAR)
-            tmp2 = cv.remap(img, shrinkMapx, shrinkMapy, cv.INTER_LINEAR)
-            img = cv.addWeighted(tmp1, 0.5, tmp2, 0.5, 0)
-
-        #convert CV2 Numpy array to PIL
-        img = cv.cvtColor(img, cv.COLOR_BGR2RGB) #Change CV2 BGR to RGB
-        im_pil = Image.fromarray(img)   #Convert to PIL
-        # Convert to an attachable Discord Format
-        arr = io.BytesIO() #convert to bytes array
-        im_pil.save(arr, format='PNG')
-        arr.seek(0) #seek back to beginning of file
-        # Send
-        await ctx.send(file=discord.File(arr,'radial.png'))
-        await ctx.channel.delete_messages(toDelete)
-
-    @commands.command(name='swirl')
-    async def swirl(self, ctx: commands.Context,help="",amount="10"):
-        img,amount,successful = await self.getImage(ctx,"radial",help,amount)
-        if not successful:
-            if(amount==0): #Error command
-                em = discord.Embed()
-                em.title = f'Error when running command'
-                em.description = f"Error: {img}."
-                em.color = 0xEE0000
-                await ctx.send(embed=em)
-                return
-            else: #Help Command
-                em = discord.Embed()
-                em.title = f'Usage: /swirl [img|imgURL] [amount]'
-                em.description = f'Swirls the image attached, url in the message, or the image attached before the command by [amount] from -100 to 100'
-                em.add_field(name="Examples", value="/swirl https://imgur.com/a/wUChw7w | /swirl (imageAttachment) 30", inline=False)
-                em.color = 0x22BBFF
-                await ctx.send(embed=em)
-                return()
-        await ctx.send("Processing... (This may take a while)")
-        toDelete = await self.getMessages(ctx,1)
-        # Processing
-        from skimage.transform import swirl #import works here but not at the beginning
-        w,h = img.size
-        img = np.array(img) #convert PIl image to Numpy
-        # Swirl
-        img = swirl(img, strength=amount, radius=w/1.3)
-        img = (img*255).astype('uint8')
-        #convert numpy array to Pillow img
-        im_pil=Image.fromarray(img)
-        # Convert to an attachable Discord Format
-        arr = io.BytesIO() #convert to bytes array
-        im_pil.save(arr, format='PNG')
-        arr.seek(0) #seek back to beginning of file
-        # Send
-        await ctx.send(file=discord.File(arr,'swirl.png'))
-        await ctx.channel.delete_messages(toDelete)
 
     
     @commands.command()

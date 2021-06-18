@@ -27,6 +27,17 @@ speedups = ["aiodns", "brotlipy", "cchardet"]
 
 [[package]]
 category = "main"
+description = "asyncio bridge to the standard sqlite3 module"
+name = "aiosqlite"
+optional = false
+python-versions = ">=3.6"
+version = "0.17.0"
+
+[package.dependencies]
+typing_extensions = ">=3.7.2"
+
+[[package]]
+category = "main"
 description = "An AST unparser for Python"
 name = "astunparse"
 optional = false
@@ -91,17 +102,6 @@ name = "braceexpand"
 optional = false
 python-versions = "*"
 version = "0.1.7"
-
-[[package]]
-category = "main"
-description = "A simple to use, interactive session and paginator with custom buttons for discord.py."
-name = "buttons"
-optional = false
-python-versions = "*"
-version = "0.1.9"
-
-[package.dependencies]
-"discord.py" = ">=1.0"
 
 [[package]]
 category = "main"
@@ -181,22 +181,27 @@ version = "1.0.1"
 
 [[package]]
 category = "main"
-description = "A help cog for discord bots"
-name = "discord-custom-help"
+description = "This library provides bunch of games that can be played on discord."
+name = "discord-ext-games"
 optional = false
-python-versions = "*"
-version = "0.0.4"
+python-versions = ">=3.6.0"
+version = "1.1.5"
 
 [package.dependencies]
-"discord.py" = "*"
+"discord.py" = ">=1.6.1"
 
 [[package]]
 category = "main"
-description = "And nicer looking interactive help menu for discord.py"
-name = "discord-pretty-help"
+description = "A helper module for discord.py"
+name = "discord-helpers"
 optional = false
-python-versions = ">=3.6,<4.0"
-version = "1.3.1"
+python-versions = "*"
+version = "0.0.3"
+
+[package.dependencies]
+aiohttp = "*"
+aiosqlite = "*"
+"discord.py" = "*"
 
 [[package]]
 category = "main"
@@ -226,6 +231,14 @@ version = "1.3.2"
 
 [package.extras]
 voice = ["discord.py", "youtube-dl"]
+
+[[package]]
+category = "main"
+description = "An extension for discord.py that allows your bot to use buttons"
+name = "dpy-button-utils"
+optional = false
+python-versions = ">=3.8"
+version = "1.0.1"
 
 [[package]]
 category = "main"
@@ -259,6 +272,18 @@ certifi = "*"
 python-dateutil = "*"
 six = ">=1.10"
 urllib3 = ">=1.15"
+
+[[package]]
+category = "main"
+description = "A Python library for scraping the Google search engine."
+name = "googlesearch-python"
+optional = false
+python-versions = ">=3.6"
+version = "1.0.1"
+
+[package.dependencies]
+beautifulsoup4 = "4.9.3"
+requests = "2.25.1"
 
 [[package]]
 category = "main"
@@ -511,6 +536,14 @@ numpy = ">=1.13.3"
 
 [[package]]
 category = "main"
+description = "Parse human-readable date/time text."
+name = "parsedatetime"
+optional = false
+python-versions = "*"
+version = "2.6"
+
+[[package]]
+category = "main"
 description = "Python Imaging Library (Fork)"
 name = "pillow"
 optional = false
@@ -709,6 +742,14 @@ version = "1.16.0"
 
 [[package]]
 category = "main"
+description = "Snake is yet another Make-like tool inspired by Rake."
+name = "snake"
+optional = false
+python-versions = "*"
+version = "0.2"
+
+[[package]]
+category = "main"
 description = "Sniff out which async library your code is running under"
 name = "sniffio"
 optional = false
@@ -735,6 +776,17 @@ version = "1.0.4"
 [package.dependencies]
 beautifulsoup4 = "*"
 requests = "*"
+
+[[package]]
+category = "main"
+description = "An async wrapper for some-random-api"
+name = "sr-api"
+optional = false
+python-versions = "*"
+version = "1.1.3"
+
+[package.dependencies]
+aiohttp = "*"
 
 [[package]]
 category = "main"
@@ -859,7 +911,7 @@ python-versions = "*"
 version = "2021.5.16"
 
 [metadata]
-content-hash = "e28d1febf01bb5af653465210a7cba402a4aa0bce80c82e855dec06eb04c839f"
+content-hash = "c3a7aa6c6ff112367dbe742178cb1cdf26e4898fa9246fd11b99606ea85ac897"
 python-versions = "^3.8"
 
 [metadata.files]
@@ -906,6 +958,10 @@ aiohttp = [
     {file = "aiohttp-3.7.4.post0-cp39-cp39-win_amd64.whl", hash = "sha256:02f46fc0e3c5ac58b80d4d56eb0a7c7d97fcef69ace9326289fb9f1955e65cfe"},
     {file = "aiohttp-3.7.4.post0.tar.gz", hash = "sha256:493d3299ebe5f5a7c66b9819eacdcfbbaaf1a8e84911ddffcdc48888497afecf"},
 ]
+aiosqlite = [
+    {file = "aiosqlite-0.17.0-py3-none-any.whl", hash = "sha256:6c49dc6d3405929b1d08eeccc72306d3677503cc5e5e43771efc1e00232e8231"},
+    {file = "aiosqlite-0.17.0.tar.gz", hash = "sha256:f0e6acc24bc4864149267ac82fb46dfb3be4455f99fe21df82609cc6e6baee51"},
+]
 astunparse = [
     {file = "astunparse-1.6.3-py2.py3-none-any.whl", hash = "sha256:c2652417f2c8b5bb325c885ae329bdf3f86424075c4fd1a128674bc6fba4b8e8"},
     {file = "astunparse-1.6.3.tar.gz", hash = "sha256:5ad93a8456f0d084c3456d059fd9a92cce667963232cbf763eac3bc5b7940872"},
@@ -933,10 +989,6 @@ beautifulsoup4 = [
 braceexpand = [
     {file = "braceexpand-0.1.7-py2.py3-none-any.whl", hash = "sha256:91332d53de7828103dcae5773fb43bc34950b0c8160e35e0f44c4427a3b85014"},
     {file = "braceexpand-0.1.7.tar.gz", hash = "sha256:e6e539bd20eaea53547472ff94f4fb5c3d3bf9d0a89388c4b56663aba765f705"},
-]
-buttons = [
-    {file = "buttons-0.1.9-py3-none-any.whl", hash = "sha256:6e74abb46ed053ba17ffb61c60cf4b6e17de63bdd8cd44d049059fd8b31d40ea"},
-    {file = "buttons-0.1.9.tar.gz", hash = "sha256:c23b48263b2327f1db386bf4faa270f421f5e24c6b6dc71e67b43d6d9ff07b5a"},
 ]
 certifi = [
     {file = "certifi-2021.5.30-py2.py3-none-any.whl", hash = "sha256:50b1e4f8446b06f41be7dd6338db18e0990601dce795c2b1686458aa7e8fa7d8"},
@@ -1017,13 +1069,13 @@ discord = [
     {file = "discord-1.0.1-py3-none-any.whl", hash = "sha256:9d4debb4a37845543bd4b92cb195bc53a302797333e768e70344222857ff1559"},
     {file = "discord-1.0.1.tar.gz", hash = "sha256:ff6653655e342e7721dfb3f10421345fd852c2a33f2cca912b1c39b3778a9429"},
 ]
-discord-custom-help = [
-    {file = "discord-custom-help-0.0.4.tar.gz", hash = "sha256:4f0d9b97e8a24da5f8935ce29ef98b36cfc240aa287b56977c8b12ef7b0d5978"},
-    {file = "discord_custom_help-0.0.4-py3-none-any.whl", hash = "sha256:987a5c496e074a5946cdfebbf706f29c6d5603e31357d2f306974c856f897395"},
+discord-ext-games = [
+    {file = "discord-ext-games-1.1.5.tar.gz", hash = "sha256:2b69241a51d2f02ffd69120ebd743bbf2a285ba016d2f3cdd6aae6608dc05266"},
+    {file = "discord_ext_games-1.1.5-py3-none-any.whl", hash = "sha256:3807cf54f2c712acdfcf48401c28d749ba1743b20c73838d15afab631d35667d"},
 ]
-discord-pretty-help = [
-    {file = "discord-pretty-help-1.3.1.tar.gz", hash = "sha256:0ddf6e8596440080b1ee89e514f9c30119f111601b0690d98fdff87193550b6f"},
-    {file = "discord_pretty_help-1.3.1-py3-none-any.whl", hash = "sha256:244fa62779c16baa57edd59b5a73e5556ca850f7a24abc6a324eefbab1280190"},
+discord-helpers = [
+    {file = "discord-helpers-0.0.3.tar.gz", hash = "sha256:49d2e6c8e1f8cea64be1a39540a851fff1ed433424f3e7cc080de1ecb60f00a9"},
+    {file = "discord_helpers-0.0.3-py3-none-any.whl", hash = "sha256:03a1db38936785d5be96c7fa1306b7189298a5e88496d6575af3045872f770ae"},
 ]
 "discord.py" = [
     {file = "discord.py-1.7.2-py3-none-any.whl", hash = "sha256:f179db299c949a8cf0a12c1b1b94d0da9a18e088857154d93ae5ab1d807ec61d"},
@@ -1033,12 +1085,20 @@ discordutils = [
     {file = "DiscordUtils-1.3.2-py3-none-any.whl", hash = "sha256:2b7e6aeadd298aa408334c28294894b80b5f754fca95586f34675274a68d233b"},
     {file = "DiscordUtils-1.3.2.tar.gz", hash = "sha256:e58b58caa3fe711b31360a7c36ec7ca4ab51dd5e8d16215bd548c9c63755d52e"},
 ]
+dpy-button-utils = [
+    {file = "dpy_button_utils-1.0.1-py3-none-any.whl", hash = "sha256:078032381ea90c4281950b9a74b72486af3685a5d6324f4aaee9c45d14662bc7"},
+    {file = "dpy_button_utils-1.0.1.tar.gz", hash = "sha256:33576141decd35270508047eff1bc13acf0e1d9c892b02c83c44b96b95dcba3f"},
+]
 flask = [
     {file = "Flask-1.1.4-py2.py3-none-any.whl", hash = "sha256:c34f04500f2cbbea882b1acb02002ad6fe6b7ffa64a6164577995657f50aed22"},
     {file = "Flask-1.1.4.tar.gz", hash = "sha256:0fbeb6180d383a9186d0d6ed954e0042ad9f18e0e8de088b2b419d526927d196"},
 ]
 giphy-client = [
     {file = "giphy_client-1.0.0.tar.gz", hash = "sha256:80ac8f4dbe64fcc3eeaef695e2c53fb9f76bb09880329c6ead201db8eb80a2e4"},
+]
+googlesearch-python = [
+    {file = "googlesearch-python-1.0.1.tar.gz", hash = "sha256:4392d99ec0bff58eb2b6074f34559462c5b99a31886d48d81e3ed414163e281b"},
+    {file = "googlesearch_python-1.0.1-py3-none-any.whl", hash = "sha256:1e1286941a1ea029de4cf7b56a5151ef85324e288e9b41c2c3b81bb945b44427"},
 ]
 h11 = [
     {file = "h11-0.12.0-py3-none-any.whl", hash = "sha256:36a3cb8c0a032f56e2da7084577878a035d3b61d104230d4bd49c0c6b555a9c6"},
@@ -1314,6 +1374,10 @@ opencv-python = [
     {file = "opencv_python-4.5.2.52-cp39-cp39-win32.whl", hash = "sha256:1a9d6dd0b1d5cb6031c38b6acf2043b2ec1717093b39592c2a0b98f5b31c8d3e"},
     {file = "opencv_python-4.5.2.52-cp39-cp39-win_amd64.whl", hash = "sha256:31d6a413d459a18ef280d88e8d9257cc5e5009657022c88bb88694a94ccce3ba"},
 ]
+parsedatetime = [
+    {file = "parsedatetime-2.6-py3-none-any.whl", hash = "sha256:cb96edd7016872f58479e35879294258c71437195760746faffedb692aef000b"},
+    {file = "parsedatetime-2.6.tar.gz", hash = "sha256:4cb368fbb18a0b7231f4d76119165451c8d2e35951455dfee97c62a87b04d455"},
+]
 pillow = [
     {file = "Pillow-8.2.0-cp36-cp36m-macosx_10_10_x86_64.whl", hash = "sha256:dc38f57d8f20f06dd7c3161c59ca2c86893632623f33a42d592f097b00f720a9"},
     {file = "Pillow-8.2.0-cp36-cp36m-manylinux1_i686.whl", hash = "sha256:a013cbe25d20c2e0c4e85a9daf438f85121a4d0344ddc76e33fd7e3965d9af4b"},
@@ -1506,6 +1570,9 @@ six = [
     {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},
     {file = "six-1.16.0.tar.gz", hash = "sha256:1e61c37477a1626458e36f7b1d82aa5c9b094fa4802892072e49de9c60c4c926"},
 ]
+snake = [
+    {file = "Snake-0.2.tar.gz", hash = "sha256:d922823ec140557e5b87dd0912cfddd65681df2753988caa3f224ebf4ebbeeac"},
+]
 sniffio = [
     {file = "sniffio-1.2.0-py3-none-any.whl", hash = "sha256:471b71698eac1c2112a40ce2752bb2f4a4814c22a54a3eed3676bc0f5ca9f663"},
     {file = "sniffio-1.2.0.tar.gz", hash = "sha256:c4666eecec1d3f50960c6bdf61ab7bc350648da6c126e3cf6898d8cd4ddcd3de"},
@@ -1517,6 +1584,9 @@ soupsieve = [
 spice-api = [
     {file = "spice_api-1.0.4-py2.py3-none-any.whl", hash = "sha256:881593f301b5b0eee1dc974e62d430fa87788360c288942d1adee24c0a1a4582"},
     {file = "spice_api-1.0.4.tar.gz", hash = "sha256:8053ba19860fa753f1049fcdc12cc08c1187c2f24c8cb562a5f1b9a056476adf"},
+]
+sr-api = [
+    {file = "sr_api-1.1.3.tar.gz", hash = "sha256:e3279176071a514b155cdeacf9571c46a6e3760d35df8ced323dd8b03c54be3a"},
 ]
 tifffile = [
     {file = "tifffile-2021.4.8-py3-none-any.whl", hash = "sha256:1cfc55f5b728e200142580a7bf108b72775c4097d007b4111876559fa1fb7432"},

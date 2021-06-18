@@ -31,19 +31,186 @@ winningConditions = [
 
 
 
+
 class Games(commands.Cog):
     """ Category for game commands """
 
     
     def __init__(self, client):
         self.client = client
+        self.bot = client
         self.ttt_games = {}
 
+    def get_embed(self, _title, _description, _color):
+        return discord.Embed(title=_title, description=_description, color=_color)
     
     @commands.Cog.listener()
     async def on_ready(self):
         print("Games are loaded")
+
+    
     # events
+    global i
+    i = 0
+
+
+
+    @commands.command(aliases=['russianr', 'roulette'])
+    async def russianroulette(self, ctx):
+        user = ctx.message.author.mention
+        global i
+        chance = 6 - i
+        num = random.randint(1, chance)
+
+        if i == 0:
+            embed=discord.Embed(description="Reloads Revolver...", color=ctx.author.color)
+            await ctx.send(embed=embed)
+            await asyncio.sleep(2)
+            embed=discord.Embed(description="Spins Chamber...", color=ctx.author.color)
+            await ctx.send(embed=embed)
+        else:
+            embed=discord.Embed(description="Already Loaded...",    color=ctx.author.color)
+            await ctx.send(embed=embed)
+
+        await asyncio.sleep(2)
+        embed=discord.Embed(description="Pulls Trigger...",     color=ctx.author.color)
+        await ctx.send(embed=embed)
+        await asyncio.sleep(2)
+
+        if num == 1:
+            embed=discord.Embed(description="Revolver Fires!  🔥🔫", color=16711680)
+            await ctx.send(embed=embed)
+            await asyncio.sleep(2)
+            embed=discord.Embed(description="You Died " + user + "! ⚰️", color=16711680)
+            await ctx.send(embed=embed)
+            i = 0
+        else:
+            embed=discord.Embed(description="Revolver Clicks!  🔫", color=65280)
+            await ctx.send(embed=embed)
+            await asyncio.sleep(2)
+            embed=discord.Embed(description="You Survived " + user + "! 😀", color=65280)
+            await ctx.send(embed=embed)
+            i += 1
+
+
+    @commands.command(aliases=['gletter', 'guessl', 'gl'])
+    async def guessletter(self, ctx, amount_of_lives:int=10):
+        lives = 0
+        letter = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']
+        if amount_of_lives > 20:
+            return await ctx.send("Amount of lives has to be less than 20!")
+        if amount_of_lives < 5:
+            def check(m):
+                return m.author == ctx.author and m.channel == ctx.channel
+            await ctx.send("Are you sure that you want less than 5 tries? Even the developer takes like 10 to 15. (y/n)")
+            messge = await self.client.wait_for("message", check=check, timeout=30)
+            try:
+                if messge.content=="y":
+                    await ctx.send("Ok then... your choice")
+                    lives = amount_of_lives
+                else:
+                    return await ctx.send("Thank you for understanding :)")
+            except asyncio.TimeoutError:
+                return await ctx.send("Timeout...try again")
+        else:
+            lives = amount_of_lives
+        await ctx.send("I'm thinking of a letter. Try to guess it!")
+        number=random.choice(letter)
+        print(number)
+        await ctx.send("Enter the guess as a lowercase ex: `s`")
+        await ctx.send(f"You only have `{lives}` guesses!")
+        await ctx.send("Also: You only have `30` seconds to guess so answer quickly!")
+        
+
+        while lives !=-1:
+
+            if lives==0:
+                lives=lives-1
+                await ctx.send(f"Game Over!!! The letter was `{number}`")
+                break
+
+            def checka(m):
+                return m.author == ctx.author
+            try:
+                guess=await self.client.wait_for("message",timeout=30, check = checka)
+            except asyncio.TimeoutError:
+                await ctx.send("Timeout")
+
+            if not guess.author.bot:
+                if guess.content!=number:
+                    lives=lives-1
+                    await ctx.send(f"Your guess is **NOT RIGHT** , you have `{lives}` attempts left")
+                else:
+                    await ctx.send("Your guess is ***Correct*** :exploding_head: :exploding_head: :exploding_head: ")
+                    break
+        
+    @commands.command(aliases=['fi'])
+    async def findimposter(self, ctx):
+        """Impostors can sabotage the reactor, 
+        which gives Crewmates 30–45 seconds to resolve the sabotage. 
+        If it is not resolved in the allotted time, The Impostor(s) will win."""
+
+
+        # determining
+        embed1 = discord.Embed(title = "Who's the imposter?" , description = "Find out who the imposter is, before the reactor breaks down!" , color=000000)
+        
+        # fields
+        embed1.add_field(name = 'Purple' , value= ' <:AmongUsPurple:838846127691661316>' , inline=False)
+        embed1.add_field(name = 'Yellow' , value= '<:AmongUsYellow:838846127565438976>' , inline=False)
+        embed1.add_field(name = 'Cyan' , value= '<:AmongUsCyan:838846127667281960>' , inline=False)
+        embed1.add_field(name = 'White' , value= '<:AmongUsWhite:838846127830204476>' , inline=False)
+        
+        # sending the message
+        msg = await ctx.send(embed=embed1)
+        
+        # emojis
+        emojis = {
+            'purple': '<:AmongUsPurple:838846127691661316>',
+            'yellow': '<:AmongUsYellow:838846127565438976>',
+            'cyan': '<:AmongUsCyan:838846127667281960>',
+            'white': '<:AmongUsWhite:838846127830204476>'
+        }
+        
+        # who is the imposter?
+        imposter = random.choice(list(emojis.items()))
+        imposter = imposter[0]
+        
+        # for testing...
+        
+        # adding choices
+        for emoji in emojis.values():
+            await msg.add_reaction(emoji)
+        
+        # a simple check, whether reacted emoji is in given choises.
+        def check(reaction, user):
+            self.reacted = reaction.emoji
+            return user == ctx.author and str(reaction.emoji) in emojis.values()
+
+        # waiting for the reaction to proceed
+        try: 
+            reaction, user = await self.bot.wait_for('reaction_add', timeout=30.0, check=check)
+        
+        except TimeoutError:
+            # reactor meltdown - defeat
+            description = "Reactor Meltdown.{0} was the imposter...".format(imposter)
+            embed = self.get_embed("Defeat", description, discord.Color.red())
+            await ctx.send(embed=embed)
+        else:
+            # victory
+            if str(self.reacted) == emojis[imposter]:
+                description = "**{0}** was the imposter!".format(imposter)
+                embed = self.get_embed("Victory", description, discord.Color.blue())
+                await ctx.send(embed=embed)
+
+            # defeat
+            else:
+                for key, value in emojis.items(): 
+                    if value == str(self.reacted):
+                        description = f"**{key}** was not the imposter...**{imposter}** was."
+                        embed = self.get_embed("Defeat", description, discord.Color.red())
+                        await ctx.send(embed=embed)
+                        break
+
     @commands.command(name='survival')
     async def _wumpus(self, ctx):
         """Play a survival game, try to find the dragon without dying!"""
@@ -56,13 +223,13 @@ class Games(commands.Cog):
 
 
 
-    @commands.command(name="guess", help="guessing game")
-    async def guess(self,ctx):
+    @commands.command(name="guessnunber", aliases=['guessn', 'gnumber', 'gn'])
+    async def guess(self,ctx, num1:int=1, num2:int=30):
         lives=3
-        number=randint(1,10)
-        await ctx.send("Guess the number from `1 to 10` :zany_face:")
+        number=randint(num1,num2)
+        await ctx.send(f"Guess the number from `{num1} to {num2}` :zany_face:")
         await ctx.send("Enter the guess only ex: `1`")
-        await ctx.send("BTW: You only have `30` seconds to guess so answer quickly!")
+        await ctx.send("Also: You only have `30` seconds to guess so answer quickly!")
 
         while lives !=-1:
 
@@ -96,30 +263,75 @@ class Games(commands.Cog):
         await ctx.send(f" <:Coin:841814443997921350> I choose {ran}.")
 
     @commands.command(aliases=['rps'])
-    async def rockpaperscissors(self, ctx, guess):
-        r = ['rock', 'paper', 'scissors']
-        p = random.choice(r)
-        await ctx.send(f"I choose {p}")
-        if guess == 'rock' and p == 'scissors':
-            await ctx.send("You won!")
-        elif guess == 'rock' and p == 'rock':
-            await ctx.send("It's a tie!")
-        elif guess == 'rock' and p == 'paper':
-            await ctx.send("I won!")
-        elif guess == 'paper' and p == 'rock':
-            await ctx.send("You won")
-        elif guess == 'paper' and p == 'scissors':
-            await ctx.send("I won!")
-        elif guess == 'paper' and p == 'paper':
-            await ctx.send("It\'s a tie!")
-        elif guess == 'scissors' and p == 'scissors':
-            await ctx.send("It's a tie!")
-        elif guess == 'scissors' and p == 'rock':
-            await ctx.send("I won!")
-        elif guess == 'scissors' and p == 'paper':
-            await ctx.send("You won!")
+    async def rockpaperscissors(self, ctx):
+
+      buttons=["🪨", "🧾", "✂️"]
+      embed=discord.Embed(title="Rock Paper Scissors!", description="Choose `Rock`, `Paper` Or `Scissors` For Your Answer!", color=ctx.author.color)
+      embed.set_footer(text="Command Requested By {}".format(ctx.message.author.name), icon_url=ctx.message.author.avatar_url)
+      sent=await ctx.send(embed=embed)
+
+      for button in buttons:
+         await sent.add_reaction(button)
+
+      while True:
+        try:
+            reaction, user = await self.client.wait_for("reaction_add", check=lambda reaction, user: user == ctx.author and reaction.emoji in buttons, timeout=30.0)
+
+        except asyncio.TimeoutError:
+            await sent.delete()
+            break
+
         else:
-            await ctx.send("Guess can only be rock, paper or scissors.")
+          bot_rps="rps"
+          rps_random=random.choice(bot_rps)
+          
+          if rps_random == "r":
+            if reaction.emoji == "🪨":
+              embed=discord.Embed(title="It's A Tie!", description="Both Players Chose Rock! It's A Tie!", color=16776960)
+              await ctx.send(embed=embed)
+              break
+            
+            elif reaction.emoji == "🧾":
+              embed=discord.Embed(title="You Win!", description="You Chose Paper & I Chose Rock! You Win!", color=65280)
+              await ctx.send(embed=embed)
+              break
+            
+            elif reaction.emoji == "✂️":
+              embed=discord.Embed(title="You Lose!", description="You Chose Scissors & I Chose Rock", color=16711680)
+              await ctx.send(embed=embed)
+              break
+          
+          elif rps_random == "p":
+            if reaction.emoji == "🪨":
+              embed=discord.Embed(title="You Lose!", description="You Chose Rock & I Chose Paper! You Lose!", color=16711680)
+              await ctx.send(embed=embed)
+              break
+            
+            elif reaction.emoji == "🧾":
+              embed=discord.Embed(title="It's A Tie!", description="Both Players Chose Paper! It's A Tie!", color=16776960)
+              await ctx.send(embed=embed)
+              break
+            
+            elif reaction.emoji == "✂️":
+              embed=discord.Embed(title="You Win!", description="You Chose Scissors & I Chose Paper! You Win!", color=65280)
+              await ctx.send(embed=embed)
+              break
+          
+          elif rps_random == "s":
+            if reaction.emoji == "🪨":
+              embed=discord.Embed(title="You Win!", description="You Chose Rock & I Chose Scissors! You Win!", color=65280)
+              await ctx.send(embed=embed)
+              break
+            
+            elif reaction.emoji == "🧾":
+              embed=discord.Embed(title="You Lose!", description="You Chose Paper & I Chose Scissors! You Lose!", color=16711680)
+              await ctx.send(embed=embed)
+              break
+            
+            elif reaction.emoji == "✂️":
+              embed=discord.Embed(title="It's A Tie!", description="Both Players Chose Scissors! It's A Tie!", color=16776960)
+              await ctx.send(embed=embed)
+              break
 
     
     
@@ -129,9 +341,9 @@ class Games(commands.Cog):
         #-------------- Help section ------------------#
         if(opponent=="" or opponent.find('help')!=-1):
             em = discord.Embed()
-            em.title = f'Usage: r!connect4 opponent [width] [height]'
+            em.title = f'Usage: rap connect4 opponent [width] [height]'
             em.description = f'Challenges opponent to a game of connect 4. The Opponent should be @mentoned to start\nBoard is default 7x6 large if not specified, though you usually wont need any board larger than that.\nMax board volume is 95 due to character limitations'
-            em.add_field(name="Example", value="r!connect4 @Username\nr!connect4 @Username 10 9", inline=False)
+            em.add_field(name="Example", value="rap connect4 @Username\nrap connect4 @Username 10 9", inline=False)
             em.color = 0x22BBFF
             await ctx.send(embed=em)
             return
@@ -417,9 +629,9 @@ class Games(commands.Cog):
         #-------------- Help section ------------------#
         if(opponent=="" or opponent.find('help')!=-1):
             em = discord.Embed()
-            em.title = f'Usage: r!chess opponent'
+            em.title = f'Usage: rap chess opponent'
             em.description = f'Challenges opponent to a game of chess. The Opponent should be @mentoned to start\nOpponent will make the first move, and thus be controlling the white pieces.'
-            em.add_field(name="Example", value="r!chess @Username", inline=False)
+            em.add_field(name="Example", value="rap chess @Username", inline=False)
             em.color = 0x22BBFF
             await ctx.send(embed=em)
             return
@@ -878,7 +1090,7 @@ class Games(commands.Cog):
     @commands.command(aliases = ['hang', 'hm'])
     async def hangman(self, ctx):
        
-        with open('words3.txt') as f:
+        with open('txt/words.txt') as f:
             word = random.choice(f.readlines()).rstrip("\n")
         hang = [
             "**```    ____",
@@ -1048,7 +1260,7 @@ class Games(commands.Cog):
     @tictactoe.error
     async def tictactoe_error(self, ctx, error):
         print(error)
-        await ctx.send('Please follow format: `r!tictactoe {opponent}`')
+        await ctx.send('Please follow format: `rap tictactoe {opponent}`')
 
     @commands.command(aliases = ['2048', 'twenty48'])
     @commands.max_concurrency(1, commands.BucketType.channel, wait = False)

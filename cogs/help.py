@@ -1,10 +1,13 @@
 import discord
+import json
 from discord.ext import commands
 
 
 class MyHelpCommand(commands.HelpCommand):
     async def send_bot_help(self, mapping):
+        
         ctx = self.context
+        
 
         cogs = []
 
@@ -23,7 +26,7 @@ class MyHelpCommand(commands.HelpCommand):
         embed = discord.Embed(
             color=discord.Color.blurple(),
             timestamp=ctx.message.created_at,
-            description=f"Use `{self.clean_prefix}help <category>` to get help on a category\n\n",
+            description=f"Use `{self.clean_prefix}help <category>` to get help on a category\nUse `{self.clean_prefix}help <command>` to get help on a command\n",
         )
 
         for cog in cogs:
@@ -41,26 +44,22 @@ class MyHelpCommand(commands.HelpCommand):
                 cog_help += "\n"
 
                 embed.add_field(name=cog.qualified_name, value=cog_help)
+        
+        embed.add_field(name = "Feedback & Suggestions", value="Use `rap suggest` or `rap feedback` to send feedback and suggestions to the support server!")
 
         embed.set_thumbnail(url = ctx.guild.icon_url)
-        embed.set_author(name = "Raptor Help!", icon_url = ctx.bot.user.avatar_url)
-        embed.add_field(name = "Art!", value = " _______  _______  _______ _________ _______  _______ \n\
-(  ____ )(  ___  )(  ____ )\__   __/(  ___  )(  ____ )\n\
-| (    )|| (   ) || (    )|   ) (   | (   ) || (    )|\n\
-| (____)|| (___) || (____)|   | |   | |   | || (____)|\n\
-|     __)|  ___  ||  _____)   | |   | |   | ||     __)\n\
-| (\ (   | (   ) || (         | |   | |   | || (\ (   \n\
-| ) \ \__| )   ( || )         | |   | (___) || ) \ \__\n\
-|/   \__/|/     \||/          )_(   (_______)|/   \__/")
+        embed.set_author(name = "Help", icon_url = ctx.bot.user.avatar_url)
+
         await ctx.send(embed=embed)
 
     # Main Help
     async def send_cog_help(self, cog):
         ctx = self.context
         pre = self.clean_prefix
+       
 
         embed = discord.Embed(
-            color=discord.Color.gold(), timestamp=ctx.message.created_at, description=""
+            color=discord.Color.blue(), timestamp=ctx.message.created_at, description=""
         )
 
         if await ctx.bot.is_owner(ctx.author):
@@ -81,10 +80,10 @@ class MyHelpCommand(commands.HelpCommand):
             cog_help = "No description provided for this cog"
 
         embed.title = f"{cog.qualified_name}"
-        embed.description += f"{cog_help}\nUse `{self.clean_prefix}help <command>` to get help on a command.\n\n**Commands :** \n"
-
+        embed.description += f"`{cog_help}`\nUse `{self.clean_prefix}help <command>` to get help on a command.\n\n**Commands:** \n"
         for command in shown_commands:
-            embed.add_field(name = f"{pre}{command.qualified_name}", value = f"Use {self.clean_prefix}help {command.qualified_name} for more info")
+            embed.add_field(name = f"{pre}{command.qualified_name}", value = 
+            f"Use {self.clean_prefix}help {command.qualified_name} for more info.")
 
         
         await ctx.send(embed=embed)
@@ -92,11 +91,10 @@ class MyHelpCommand(commands.HelpCommand):
     # Command Help
     async def send_command_help(self, command):
         ctx = self.context
-
+        
         embed = discord.Embed(
             color=discord.Color.green(),
-            timestamp=ctx.message.created_at,
-            description="",
+            timestamp=ctx.message.created_at
         )
 
         if (
@@ -107,22 +105,34 @@ class MyHelpCommand(commands.HelpCommand):
             )
 
         if command.signature:
-            embed.title = f"{self.clean_prefix}{command.qualified_name} {command.signature} \n"
+            embed.title = f"{command.qualified_name} command!"
+            embed.description = f"Syntax: \n\
+```fix\n{self.clean_prefix}{command.qualified_name} {command.signature} \n```"
         else:
-            embed.title = f"{self.clean_prefix}{command.qualified_name}\n"
+            embed.title = f"{command.qualified_name}!"
+            embed.description = f"Syntax: \n\
+```fix\n{self.clean_prefix}{command.qualified_name}\n```"
 
-        embed.description = command.help or "No description provided"
-
+        ali = ", ".join(command.aliases)
+        try:
+            embed.add_field(name = "Help:", value = f"```fix\n{command.help}```")
+        except:
+            embed.add_field(name = "Help:", value = f"```fix\nNo description provided```")
         if len(command.aliases) > 0:
-            embed.description += "\nAliases : " + ", ".join(command.aliases)
+            embed.add_field(name = "Aliases:", value = f"```fix\n{ali}```")
 
-        
+        embed.add_field(name = "Command Cog", value = f"```fix\n{command.cog_name}```")
+
+        embed.add_field(name = "Cooldown:", value= f"```fix\n{round(command.get_cooldown_retry_after(ctx))}```")
+        embed.set_footer(text = "<> means required and [] means optional")
+       
         await ctx.send(embed=embed)
 
     # Group Help
     async def send_group_help(self, group):
         ctx = self.context
         pre = self.clean_prefix
+        
 
         embed = discord.Embed(
             color=discord.Color.blurple(), timestamp=ctx.message.created_at
@@ -148,7 +158,7 @@ class MyHelpCommand(commands.HelpCommand):
             ]
 
         if len(group_commands) == 0:
-            return await ctx.send(f'No command called "{group.qualified_name}" found.')
+            return await ctx.send(f'No command called `{group.qualified_name}` found.')
 
         for command in group_commands:
             if command.signature:
@@ -159,6 +169,7 @@ class MyHelpCommand(commands.HelpCommand):
             
 
         
+
         await ctx.send(embed=embed)
 
 

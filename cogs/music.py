@@ -72,8 +72,13 @@ class Music(commands.Cog):
     @commands.command()
     async def queue(self, ctx):
         player = music.get_player(guild_id=ctx.guild.id)
+        embed = discord.Embed(title = "Queue!", description = "")
+        try:
+            embed.description += {" \n".join([song.name for song in player.current_queue()])}
+        except:
+            return await ctx.send("There are no songs in queue")
         await ctx.send("The songs are separated by commas")
-        await ctx.send(f"{', '.join([song.name for song in player.current_queue()])}")
+        await ctx.send(embed = embed)
 
     @commands.command(aliases=['np'])
     async def nowplaying(self, ctx):

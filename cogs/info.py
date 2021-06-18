@@ -5,7 +5,9 @@ import json
 import datetime
 import os
 import typing
-import DiscordUtils
+from utils import formats, time as tim
+from typing import Union
+from collections import Counter
 import time
 import psutil
 from discord.ext import commands
@@ -28,6 +30,149 @@ class Info(commands.Cog):
 
     # commands
 
+    @commands.command(aliases=['si'])
+    @commands.guild_only()
+    async def serverinfo(self, ctx, *, guild_id: int = None):
+        """Shows info about the current server."""
+
+        if guild_id is not None and await self.bot.is_owner(ctx.author):
+            guild = self.bot.get_guild(guild_id)
+            if guild is None:
+                return await ctx.send(f'Invalid Guild ID given.')
+        else:
+            guild = ctx.guild
+
+        roles = [role.name.replace('@', '@\u200b') for role in guild.roles]
+
+        if not guild.chunked:
+            async with ctx.typing():
+                await guild.chunk(cache=True)
+
+        # figure out what channels are 'secret'
+        everyone = guild.default_role
+        everyone_perms = everyone.permissions.value
+        secret = Counter()
+        totals = Counter()
+        for channel in guild.channels:
+            allow, deny = channel.overwrites_for(everyone).pair()
+            perms = discord.Permissions((everyone_perms & ~deny.value) | allow.value)
+            channel_type = type(channel)
+            totals[channel_type] += 1
+            if not perms.read_messages:
+                secret[channel_type] += 1
+            elif isinstance(channel, discord.VoiceChannel) and (not perms.connect or not perms.speak):
+                secret[channel_type] += 1
+
+        e = discord.Embed()
+        e.title = guild.name
+        guild = ctx.guild
+
+        description = str(guild.description)
+        region = str(guild.region)
+        memberCount = str(guild.member_count)
+        icon = str(guild.icon_url)
+        embed = e
+        e.add_field(name = "Description:", value = description)
+        embed.set_thumbnail(url=icon)
+        embed.add_field(name="Region", value=region)
+        embed.add_field(name="Member Count", value=memberCount)
+        embed.add_field(name="Role Count", value=len(ctx.guild.roles))
+        embed.set_footer(text=f'Requested by {ctx.author}', icon_url=ctx.author.avatar_url)
+        e.description = f'**ID**: {guild.id}\n**Owner**: {guild.owner}'
+        if guild.icon:
+            e.set_thumbnail(url=guild.icon_url)
+
+        channel_info = []
+        key_to_emoji = {
+            discord.TextChannel: '<:text:854459874360819734>',
+            discord.VoiceChannel: '<:voice:854459874402238485>',
+        }
+        for key, total in totals.items():
+            secrets = secret[key]
+            try:
+                emoji = key_to_emoji[key]
+            except KeyError:
+                continue
+
+            if secrets:
+                channel_info.append(f'{emoji} {total} ({secrets} locked)')
+            else:
+                channel_info.append(f'{emoji} {total}')
+
+        info = []
+        features = set(guild.features)
+        all_features = {
+            'PARTNERED': 'Partnered',
+            'VERIFIED': 'Verified',
+            'DISCOVERABLE': 'Server Discovery',
+            'COMMUNITY': 'Community Server',
+            'FEATURABLE': 'Featured',
+            'WELCOME_SCREEN_ENABLED': 'Welcome Screen',
+            'INVITE_SPLASH': 'Invite Splash',
+            'VIP_REGIONS': 'VIP Voice Servers',
+            'VANITY_URL': 'Vanity Invite',
+            'COMMERCE': 'Commerce',
+            'LURKABLE': 'Lurkable',
+            'NEWS': 'News Channels',
+            'ANIMATED_ICON': 'Animated Icon',
+            'BANNER': 'Banner'
+        }
+
+        
+
+        e.add_field(name='Channels', value='\n'.join(channel_info))
+        
+
+        if guild.premium_tier != 0:
+            boosts = f'Level {guild.premium_tier}\n{guild.premium_subscription_count} boosts'
+            last_boost = max(guild.members, key=lambda m: m.premium_since or guild.created_at)
+            if last_boost.premium_since is not None:
+                boosts = f'{boosts}\nLast Boost: {last_boost} ({tim.human_timedelta(last_boost.premium_since, accuracy=2)})'
+            e.add_field(name='Boosts', value=boosts, inline=False)
+
+        bots = sum(m.bot for m in guild.members)
+        fmt = f'Total: {guild.member_count} ({formats.plural(bots):bot})'
+
+        e.add_field(name='Members', value=fmt, inline=False)
+        e.add_field(name='Roles', value=', '.join(roles) if len(roles) < 10 else f'{len(roles)} roles')
+
+        emoji_stats = Counter()
+        for emoji in guild.emojis:
+            if emoji.animated:
+                emoji_stats['animated'] += 1
+                emoji_stats['animated_disabled'] += not emoji.available
+            else:
+                emoji_stats['regular'] += 1
+                emoji_stats['disabled'] += not emoji.available
+
+        fmt = f'Regular: {emoji_stats["regular"]}/{guild.emoji_limit}\n' \
+              f'Animated: {emoji_stats["animated"]}/{guild.emoji_limit}\n' \
+
+        if emoji_stats['disabled'] or emoji_stats['animated_disabled']:
+            fmt = f'{fmt}Disabled: {emoji_stats["disabled"]} regular, {emoji_stats["animated_disabled"]} animated\n'
+
+        fmt = f'{fmt}Total Emoji: {len(guild.emojis)}/{guild.emoji_limit*2}'
+        e.add_field(name='Emoji', value=fmt, inline=False)
+        e.set_footer(text='Created').timestamp = guild.created_at
+        await ctx.send(embed=e)
+
+    async def say_permissions(self, ctx, member, channel):
+        permissions = channel.permissions_for(member)
+        e = discord.Embed(colour=member.colour)
+        avatar = member.avatar_url_as(static_format='png')
+        e.set_author(name=str(member), url=avatar)
+        allowed, denied = [], []
+        for name, value in permissions:
+            name = name.replace('_', ' ').replace('guild', 'server').title()
+            if value:
+                allowed.append(name)
+            else:
+                denied.append(name)
+
+        e.add_field(name='Allowed', value='\n'.join(allowed))
+        e.add_field(name='Denied', value='\n'.join(denied))
+        await ctx.send(embed=e)
+
     @commands.command(help="Sends how many members there are in the server.",aliases=['mc'])
     async def membercount(self, ctx):
         await ctx.send(f"This server has {ctx.guild.member_count} members!")
@@ -46,32 +191,7 @@ class Info(commands.Cog):
         await ctx.send(f"I am in {len(self.client.guilds)} servers!")
         
 
-    @commands.command(help="Shows info about the server",aliases=['si'])
-    async def serverinfo(self, ctx):
-        name = str(ctx.guild.name)
-        description = str(ctx.guild.description)
 
-        owner = f'`{str(ctx.guild.owner)}`'
-        _id = f'`{str(ctx.guild.id)}`'
-        region = f'`{str(ctx.guild.region)}`'
-        memberCount = f'`{str(ctx.guild.member_count)}`'
-
-        icon = str(ctx.guild.icon_url)
-
-        embed = discord.Embed(
-            title=name + " Server Information",
-            description=f"Description = {description}",
-            color=discord.Color.blue()
-        )
-        embed.set_thumbnail(url=icon)
-        embed.add_field(name="Owner", value=owner, inline=True)
-        embed.add_field(name="Server ID", value=_id, inline=True)
-        embed.add_field(name="Region", value=region, inline=True)
-        embed.add_field(name="Member Count", value=memberCount, inline=True)
-        embed.add_field(name="Role Count", value=f'`{len(ctx.guild.roles)}`', inline=True)
-        embed.set_footer(text=f'Requested by {ctx.author}', icon_url=ctx.author.avatar_url)
-
-        await ctx.send(embed=embed)
 
     @commands.command(help="Shows info about the channel",aliases=['ci'])
     async def channelinfo(self, ctx, channel:discord.TextChannel=None):
@@ -111,6 +231,10 @@ class Info(commands.Cog):
         Who.add_field(name="Joined Server On:", value=member.joined_at.strftime("`%a, %#d %B %Y, %I:%M %p UTC`"))
         perms = ', '.join(perm for perm, value in member.guild_permissions if value)
         Who.add_field(name="Server Perms:", value=f'`{perms}`')
+        roles = [role.name.replace('@', '@\u200b') for role in getattr(member, 'roles', [])]
+        role = ', '.join(roles) if len(roles) < 10 else f'{len(roles)} roles'
+        if roles:
+            Who.add_field(name='Roles', value=f"`{role}`", inline=False)
         Who.set_thumbnail(url = member.avatar_url)
         Who.set_footer(icon_url = ctx.author.avatar_url, text = f"Requested by {ctx.author}")
         await ctx.send(embed=Who)
@@ -122,8 +246,6 @@ class Info(commands.Cog):
         hours, remainder = divmod(int(delta_uptime.total_seconds()), 3600)
         minutes, seconds = divmod(remainder, 60)
         days, hours = divmod(hours, 24)
-        current_time = time.time()
-        uname = platform.uname()
         embed = discord.Embed(title=f'{self.client.user.name} Stats', colour=ctx.author.colour)
         embed.add_field(name="• Bot Name:", value=f'`{self.client.user.name}`')
         embed.add_field(name="• Bot Id:", value=f'`{self.client.user.id}`')
@@ -138,7 +260,7 @@ class Info(commands.Cog):
         embed.add_field(name="• Total Spaced Used:", value=f'`{round(obj_Disk.used / (1024.0 ** 3))} MB`')
         embed.add_field(name="• Uptime:", value=f"`{days}d, {hours}h, {minutes}m, {seconds}s`", inline=True)
         
-        embed.add_field(name="• Bot Developers:", value="<@801234598334955530>")
+        embed.add_field(name="• Bot Developers:", value="<@801234598334955530> `&` <@814226043924643880>")
         embed.set_thumbnail(url=self.client.user.avatar_url)
         embed.set_footer(icon_url=ctx.author.avatar_url, text=f"Requested {ctx.author.name}#{ctx.author.discriminator}")
         await ctx.send(embed=embed)

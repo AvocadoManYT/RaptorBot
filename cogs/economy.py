@@ -1,9 +1,18 @@
 import discord
 import json
 import random
+import asyncio
 from discord.ext import commands
 
+bet = "bet"
+win = "win"
+loss = "loss"
+slots = "slots"
+dice = "dice"
+
+
 class Economy(commands.Cog):
+	
     """ Category for ecomony commands """
 
     def __init__(self, client):
@@ -14,18 +23,42 @@ class Economy(commands.Cog):
     async def on_ready(self):
         print('Economy cog is ready.')
 
-    
+    @commands.Cog.listener()
+    async def on_command_completion(self, ctx):
+        msg = ctx
+        num = random.randint(1, 20)
+        if num == 10:
+            f = open("txt/words.txt", "r")
+            asd = f.readlines()
+            rword = random.choice(asd)
+            em = discord.Embed(title = "Common Event!", description = f"Type the word `{rword}` into the chat to get a prize!", color = msg.author.color)
+            earn = random.randint(1000, 3000)
+            em.set_footer(text="Hurry, becuase you only have 10 seconds to answer!")
+            await msg.channel.send(embed = em)
+            def check(m):
+                return m.author == msg.author and m.channel == msg.channel
+            try:
+                mess = await self.client.wait_for("message", check=check, timeout = 10)
+                if mess.content == rword.strip():
+                    await msg.channel.send(f"Good job in typing the word. You earned `△ {earn}`!")
+                    await self.update_bank(ctx.author, earn)
+                if not mess.content == rword.strip():
+                    await ctx.send("You failed in typing the word correctly so you get nothing.")
+
+            except asyncio.TimeoutError:
+                await ctx.send("You failed in typing the word in time so you get nothing.")
+
+
+
     
     # commands
+    
+
     @commands.command(aliases=['bal'])
     async def balance(self, ctx, member : discord.Member = None):
         if member is None:
             member = ctx.author
         await self.open_account(member)
-
-        open_account = self.open_account
-        update_bank = self.update_bank
-        get_bank_data = self.get_bank_data
 
         user =  member
 
@@ -35,11 +68,15 @@ class Economy(commands.Cog):
 
         bank_amt = users[str(user.id)]["bank"]
 
+        bankspace = users[str(user.id)]["bankspace"]
+
         net_worth = bank_amt + wallet_amt
+
+        af = round((bank_amt / bankspace) * 100)
 
         balance = discord.Embed(title = f"{member.name}'s balance" , color = discord.Colour.blue())
         balance.add_field(name = "Wallet Balance :dollar:", value = f"△ {wallet_amt}")
-        balance.add_field(name = "Bank Balance :bank:", value = f"△ {bank_amt}", inline = False)
+        balance.add_field(name = "Bank Balance :bank:", value = f"△ {bank_amt}/{bankspace} `{af}%`", inline = False)
         balance.add_field(name = "Net Worth :moneybag:", value = f"△ {net_worth}", inline = False)
         balance.set_thumbnail(url = member.avatar_url)
         balance.set_footer(text = f"Requested By {ctx.author}", icon_url = ctx.author.avatar_url)
@@ -80,13 +117,19 @@ class Economy(commands.Cog):
 
         bal = await update_bank(ctx.author)
         if amount == "max":
-            amount = bal[1]
+            if bal[0] > 25000:
+                amount == 25000
+            else:
+                amount = bal[0]
 
         if amount == "all":
-            amount = bal[1]
+            if bal[0] > 25000:
+                amount == 25000
+            else:
+                amount = bal[0]
 
         amount = int(amount)
-        if amount>bal[1]:
+        if amount>bal[0]:
             await ctx.send("Far out! You don't have that much money!")
             return
         
@@ -105,28 +148,33 @@ class Economy(commands.Cog):
         color = ctx.author.color
         f = ""
         
-        if r > p:
+        if r > p or r == p:
             f = f"You won! You got △ {amount*2}"
             users[str(user.id)]["wallet"] += amount*2
             color = discord.Colour.green()
+            users[str(user.id)]["gambles"]["bet"]["win"] += 1
+            embed = discord.Embed(
+            title = "Betted!",
+            color = color
+            )
+            embed.add_field(name = "You rolled:", value = r)
+            embed.add_field(name = "I rolled:", value = p, inline = True)
+            embed.add_field(name = f, value = "GG", inline = False)
+            await ctx.send(embed = embed)
         else:
             f = f"I won! You lost △ {amount}."
             users[str(user.id)]["wallet"] -= amount
             color = discord.Colour.red()
+            users[str(user.id)]["gambles"]["bet"]["loss"] += 1
 
-        embed = discord.Embed(
-            title = "Betted!",
-            color = color
-        )
-        embed.add_field(name = "You rolled:", value = r)
-        embed.add_field(name = "I rolled:", value = p, inline = True)
-        embed.add_field(name = f, value = "GG", inline = False)
-        
-        
-
-        await ctx.send(embed = embed )
-        
-        
+            embed = discord.Embed(
+                title = "Betted!",
+                color = color
+            )
+            embed.add_field(name = "You rolled:", value = r)
+            embed.add_field(name = "I rolled:", value = p, inline = True)
+            embed.add_field(name = f, value = "GG", inline = False)
+            await ctx.send(embed = embed)
 
         with open("mainbank.json", "w") as f:
             json.dump(users,f)
@@ -173,16 +221,15 @@ class Economy(commands.Cog):
             elif coins < 0:
                 await ctx.send("Number cannot be negative!")
                 return
-            elif coins > 99999:
+            elif coins > 1000000:
                 await ctx.send("Number too big lmao")
                 return
+            if member == None:
+                await self.update_bank(ctx.author,coins)
+                await ctx.send("Injection Complete")
             else:
-                if member == None:
-                    await self.update_bank(ctx.author,coins)
-                    name = ctx.author.name
-                else:
-                    await self.update_bank(member,coins)
-                    await ctx.send("Injection Complete")
+                await self.update_bank(member,coins)
+                await ctx.send("Injection Complete")
         else:
             await ctx.send("You're not the owner or me :/")
 
@@ -199,9 +246,26 @@ class Economy(commands.Cog):
 
         
         earnings = random.randrange(1502)
-        place = ["the bank", "the shop", "Discord", "YouTube", "Twitter", "Instagram", "your dms", "my code", "the internet", "Google", "Bing", "Yahoo"]
-        
-        await ctx.send(f"You searched {random.choice(place)} and found △ {earnings}!")
+        place = ["the bank", "the shop", "the earth", "the arena", "the stadium"]
+        elect = ["Discord", "YouTube", "Twitter", "Instagram", "your dms", "my code", "the internet", "Google", "Bing", "Yahoo"]
+        imagi = ['the clouds', 'the ponies', 'the house', 'the store', 'the Empire state building']
+        rp = random.choice(place)
+        re = random.choice(elect)
+        ri = random.choice(imagi)
+        await ctx.send(f"You can search from `{rp}`, `{re}` or `{ri}`\n\
+Type where you want to search in the chat")
+        def check(m):
+            return m.author == ctx.author and m.channel == ctx.channel
+        msg = await self.client.wait_for("message", check=check, timeout=30)
+        try:
+            if msg.content == rp:
+                await ctx.send(f"You searched {rp} and found △ {earnings}!")
+            if msg.content == re:
+                await ctx.send(f"You searched {re} and found △ {earnings}!")
+            if msg.content == ri:
+                await ctx.send(f"You searched {ri} and found △ {earnings}!")
+        except asyncio.TimeoutError:
+            await ctx.send("Timeout. Try again later")
         
         
         users[str(user.id)]["wallet"] += earnings
@@ -224,17 +288,26 @@ class Economy(commands.Cog):
 
         bal = await update_bank(ctx.author)
         if amount == "max":
-            amount = bal[1]
+            if bal[0] > 25000:
+                amount == 25000
+            else:
+                amount = bal[0]
+
+        if amount == "all":
+            if bal[0] > 25000:
+                amount == 25000
+            else:
+                amount = bal[0]
 
         amount = int(amount)
-        if amount>bal[1]:
-            await ctx.send("Far out! You don't have that much money!")
+        if amount>bal[0]:
+            await ctx.send("Far out! You don't have that much money in your bank!")
             return
         
         if amount<0:
             await ctx.send("Amount must be positive. ;-;")
             return
-
+        
         await update_bank(ctx.author, amount)
         await update_bank(ctx.author, -1*amount, "bank")
 
@@ -254,21 +327,36 @@ class Economy(commands.Cog):
 
         bal = await update_bank(ctx.author)
         if amount == "max":
-            amount = bal[0]
+            if bal[0] > 25000:
+                amount == 25000
+            else:
+                amount = bal[0]
+
+        if amount == "all":
+            if bal[0] > 25000:
+                amount == 25000
+            else:
+                amount = bal[0]
 
         amount = int(amount)
         if amount>bal[0]:
-            await ctx.send("Far out! You don't have that much money!")
+            await ctx.send("Far out! You don't have that much money in your wallet!")
             return
 
         if amount<0:
             await ctx.send("Amount must be positive. ;-;")
             return
 
-        await update_bank(ctx.author, -1*amount)
-        await update_bank(ctx.author, amount, "bank")
+        am = amount + bal[1]
+        bs = await self.check_bankspace(ctx.author)
+        if am > bs:
+            return await ctx.send(f"You dont have enough space in your bank to deposit `{amount}`! Check your bank space by using `rap bal`.")
+        else:
+            await update_bank(ctx.author, -1*amount)
+            await update_bank(ctx.author, amount, "bank")
 
-        await ctx.send(f"You deposited △ {amount}!")
+            await ctx.send(f"You deposited △ {amount}!")
+        
 
     @commands.command(aliases=['send'])
     async def share(self, ctx,member : discord.Member, amount = None):
@@ -285,10 +373,10 @@ class Economy(commands.Cog):
 
         bal = await update_bank(ctx.author)
         if amount == "max":
-            amount = bal[1]
+            amount = bal[0]
 
         amount = int(amount)
-        if amount>bal[1]:
+        if amount>bal[0]:
             await ctx.send("Far out! You don't have that much money!")
             return
 
@@ -323,7 +411,10 @@ class Economy(commands.Cog):
 
         bal = await update_bank(ctx.author)
         if amount == "max":
-            amount = 25000
+            if bal[0] > 25000:
+                amount == 25000
+            else:
+                amount = bal[0]
 
         amount = int(amount)
         if amount>bal[0]:
@@ -339,12 +430,15 @@ class Economy(commands.Cog):
         if (a == b == c):
             await ctx.send(f"{slotmachine} All matching, you won {amount*4}! 🎉")
             await update_bank(ctx.author, 4*amount)
+            await self.update_gstats(ctx.author, slots, win, 2)
         elif (a == b) or (a == c) or (b == c):
             await ctx.send(f"{slotmachine} 2 in a row, you won {amount*2}!🎉")
             await update_bank(ctx.author, 2*amount)
+            await self.update_gstats(ctx.author, slots, win)
         else:
             await ctx.send(f"{slotmachine} No match, you lost {amount}. 😢")
             await update_bank(ctx.author, -1*amount)
+            await self.update_gstats(ctx.author, slots, "loss")
 
     @commands.command()
     @commands.cooldown(1, 15, commands.BucketType.user)
@@ -380,12 +474,15 @@ class Economy(commands.Cog):
 
         await ctx.send(str(final))
 
+
         if final[0] == final[1] or final[0] == final[2] or final[2] == final[1]:
             await update_bank(ctx.author, 2*amount)
             await ctx.send(f"You won △ {2*amount}")
+            await self.update_gstats(ctx.author, "dice", "win")
         else:
             await update_bank(ctx.author, -1*amount)
             await ctx.send(f"You lost △ {amount}. Oof.")
+            await self.update_gstats(ctx.author, "dice", "loss")
 
 
     @commands.command()
@@ -404,6 +501,17 @@ class Economy(commands.Cog):
             users[str(user.id)] = {}
             users[str(user.id)]["wallet"] = 0
             users[str(user.id)]["bank"] = 0
+            users[str(user.id)]["bankspace"] = 0
+            users[str(user.id)]["gambles"] = {}
+            users[str(user.id)]["gambles"]["dice"] = {}
+            users[str(user.id)]["gambles"]["dice"]["win"] = 0
+            users[str(user.id)]["gambles"]["dice"]["loss"] = 0
+            users[str(user.id)]["gambles"]["slots"] = {}
+            users[str(user.id)]["gambles"]["slots"]["win"] = 0
+            users[str(user.id)]["gambles"]["slots"]["loss"] = 0
+            users[str(user.id)]["gambles"]["bet"] = {}
+            users[str(user.id)]["gambles"]["bet"]["win"] = 0
+            users[str(user.id)]["gambles"]["bet"]["loss"] = 0
 
             with open("mainbank.json", "w") as f:
                 json.dump(users,f)
@@ -414,35 +522,33 @@ class Economy(commands.Cog):
                 {"name":"DinoCatcher","price":25000,"description":"Tools"},
                 {"name":"DinoScouterRV","price":50000,"description":"Tools"},
                 {"name":"BabyDinoEgg","price":75000,"description":"Eggs"},
-                {"name":"SpinosaurusEgg","price":100000,"description":"Eggs"},
-                {"name":"UltrasaurusEgg","price":250000,"description":"Eggs"},
+                {"name":"Spinosaurus","price":100000,"description":"Eggs"},
+                {"name":"Ultrasaurus","price":250000,"description":"Eggs"},
                 {"name":"Gigantosarus","price":500000,"description":"Eggs"},
-                {"name":"TyranasaurusRexEgg","price":1000000,"description":"Eggs"},
-                {"name":"VelociraptorEgg","price":2500000,"description":"Eggs"},
-                {"name":"HolyRaptorEgg","price":5000000,"description":"Eggs"}]
+                {"name":"TRex","price":1000000,"description":"Eggs"},
+                {"name":"Velociraptor","price":2500000,"description":"Eggs"},
+                {"name":"HolyRaptor","price":5000000,"description":"Eggs"}]
 
     @commands.command()
     async def shop(self, ctx, item = None):
-        if item == None:
-            em = discord.Embed(title = "Shop", color = discord.Colour.blue())
 
             for item in self.mainshop:
-                name = item["name"]
-                price = item["price"]
-                desc = item["description"]
-                em.add_field(name = f"{name}", value = f"△ {price} | {desc}")
-                
-
-            await ctx.send(embed = em)
-        elif item == item["name"]:
-                for item in self.mainshop:
+                if item == None:
+                    em = discord.Embed(title = "Shop", color = discord.Colour.blue())
                     name = item["name"]
                     price = item["price"]
                     desc = item["description"]
-                emItem = discord.embed(title = f"{name}", description = f"{price}", color = discord.Colour.blue())
-                emItem.add_field(name = f"{desc}")
+                    em.add_field(name = f"{name}", value = f"△ {price} | {desc}")
+                
 
-                await ctx.send(embed = emItem)
+                    await ctx.send(embed = em)
+                elif item == str(item["name"]):
+                    emItem = discord.embed(title = f"{name}", description = f"Use rap buy {name.lower()} to buy this", color = discord.Colour.blue())
+                    emItem.add_field(name = "Description", value = f"{desc}")
+                    emItem.add_field(name = "Price", value = price)
+                    await ctx.send(embed = emItem)
+                else:
+                    await ctx.send("Invalid name")
 
 
 
@@ -453,6 +559,9 @@ class Economy(commands.Cog):
         get_bank_data = self.get_bank_data
         
         await open_account(ctx.author)
+
+        if amount < 0:
+            return await ctx.send("You can't buy negative amount of items!")
 
         res = await self.buy_this(ctx.author,item,amount)
 
@@ -559,11 +668,14 @@ class Economy(commands.Cog):
         await open_account(ctx.author)
 
         res = await self.sell_this(ctx.author,item,amount)
+        if amount < 0:
+            return await ctx.send("You can't sell negative amount of items!")
 
         if not res[0]:
             if res[1]==1:
                 await ctx.send("That Object isn't there!")
                 return
+            
             if res[1]==2:
                 await ctx.send(f"You don't have {amount} {item} in your bag.")
                 return
@@ -671,6 +783,22 @@ class Economy(commands.Cog):
             
         bal = [users[str(user.id)]["wallet"],users[str(user.id)]["bank"]]
         return bal
+
+    async def check_bankspace(self, user):
+        users = await self.get_bank_data()
+
+        bs = users[str(user.id)]["bankspace"]
+        return bs
+
+    async def update_gstats(self, user, mode, worl, amount=1):
+        users = await self.get_bank_data()
+
+        users[str(user.id)]["gambles"][mode][worl] += amount
+
+        with open("mainbank.json", "w") as f:
+                json.dump(users,f)
+            
+        
 
 
 def setup(client):

@@ -1,95 +1,344 @@
 import discord
 import datetime
+import time
 import asyncio
+import googlesearch
 import random
+import requests
 import praw
+from dpy_button_utils.confirmation import ButtonConfirmation
 import wikipedia
 import aiohttp
 import urllib, re
+import json
 import giphy_client
 from giphy_client.rest import ApiException
 from discord.ext import commands
 
 
+err_color = discord.Color.red()
+color = 0x0da2ff
+yt_key = "AIzaSyDVMJyIjsAal6dssgA0bQmGVGblH7pS2Bw"
 class Fun(commands.Cog):
     """ Category for fun commands """
     def __init__(self, client):
         self.client = client
         self.malid = None
         self.loop = asyncio.get_event_loop()
-
+        self.bot = client
+        self.session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30))
+        
    # events
     @commands.Cog.listener()
     async def on_ready(self):
         print('Fun cog is ready.')
 
+    @commands.command()
+    async def funfact(self, ctx):
+        response = requests.get("https://useless-facts.sameerkumar.website/api")
+        data = response.json()
+        fact = data['data']
+        await ctx.send(fact)
+
+
+    @commands.command(aliases=['ar'])
+    async def addreaction(self, ctx, msg: discord.Message=None, emoji=None):
+        try:
+            await msg.add_reaction(emoji)
+            await ctx.send("Did it!")
+        except:
+            await ctx.send("Error 101")
+
+    @commands.command(aliases=['gi', 'google'])
+    async def googleit(self, ctx, amount_of_results:int=5, *, term):
+        res = googlesearch.search(term, num_results=amount_of_results, lang="en")
+        em = discord.Embed(title='Google Search',description="Here you go!")
+        index = 0
+        try:
+            for i in res:
+                index += 1
+                em.add_field(name = index, value = i, inline = False)
+            await ctx.message.channel.send(embed=em)
+        except:
+            await ctx.send("error 404 not found")
+
         
 
+
+
+    @commands.command(description='Sends a random year fact.')
+    @commands.cooldown(1, 15, commands.BucketType.user)
+    async def yearfact (self, ctx):
+
+        async with aiohttp.ClientSession() as cs:
+
+            async with cs.get(f"http://numbersapi.com/random/year?json") as r:
+                data = await r.json()
+
+                embed = discord.Embed(title= data['number'], description=data['text'], colour=0x529dff)
+
+                embed.set_footer(text=f"Requested by {ctx.author}, Fact from numbersapi.com", icon_url=ctx.author.avatar_url)
+                await ctx.send(embed=embed)
     # command
+    
+
+    @commands.command(aliases=["fancy"])
+    async def fancify(self, ctx, *, text):
+        """Makes text fancy!"""
+        try:
+            def strip_non_ascii(string):
+                """Returns the string without non ASCII characters."""
+                stripped = (c for c in string if 0 < ord(c) < 127)
+                return ''.join(stripped)
+
+            text = strip_non_ascii(text)
+            if len(text.strip()) < 1:
+                return await ctx.send(":x: ASCII characters only please!")
+            output = ""
+            for letter in text:
+                if 65 <= ord(letter) <= 90:
+                    output += chr(ord(letter) + 119951)
+                elif 97 <= ord(letter) <= 122:
+                    output += chr(ord(letter) + 119919)
+                elif letter == " ":
+                    output += " "
+            await ctx.send(output)
+
+        except:
+            await ctx.send("Error 101... Try again later")
+
+    
+
+
+    roasts = ["You’re the reason God created the middle finger.",
+          "You’re a grey sprinkle on a rainbow cupcake.",
+          "If your brain was dynamite, there wouldn’t be enough to blow your hat off.",
+          "You are more disappointing than an unsalted pretzel.",
+          "Light travels faster than sound which is why you seemed bright until you spoke.",
+          "We were happily married for one month, but unfortunately we’ve been married for 10 years.",
+          "Your kid is so annoying, he makes his Happy Meal cry.",
+          "You have so many gaps in your teeth it looks like your tongue is in jail.",
+          "Your secrets are always safe with me. I never even listen when you tell me them.",
+          "I’ll never forget the first time we met. But I’ll keep trying."
+          "I forgot the world revolves around you.My apologies, how silly of me.",
+          "I only take you everywhere I go just so I don’t have to kiss you goodbye.",
+          "Hold still.I’m trying to imagine you with personality.",
+          "Our kid must have gotten his brain from you! I still have mine.",
+          "Your face makes onions cry.",
+          "The only way my husband would ever get hurt during an activity is if the TV exploded.",
+          "You look so pretty.Not at all gross, today.",
+          "It’s impossible to underestimate you."]
+
+
+    
+
+    @commands.command()
+    async def roast(self, ctx, member:discord.Member=None):
+        if member == None:
+            return await ctx.send("I can't roast nobody!")
+        if member.bot:
+            return await ctx.send("Back off from my kind buddy")
+        if member == self.client.user:
+            return await ctx.send("Why do you wanna yomomma me?")
+        if member == ctx.author:
+            return await ctx.send("Why do you wanna roast yourself?")
+        else:
+            await ctx.send(member.mention)
+            await ctx.send(random.choice(self.roasts))
+
+    choices = ['Yo momma so fat when she walked past the TV I missed three episodes',
+           'Yo momma so fat she needs cheat codes for Wii Fit',
+           'Yo momma so fat when she went to KFC and they asker her what size of bucket, she said "The one on the roof"',
+           'Yo momma so fat, I took a picture of her last Christmas and it\'s still printing',
+           'Yo momma so fat and old when God said "Let there be light" he asked your momma to step out of the way',
+           'Yo momma so fat when she stept out in a yellow jacket people yell TAXI',
+           'Yo momma so fat I tried driving around her and I ran out of gas',
+           'Yo momma so fat it took Thanos two snaps to kill her',
+           'Yo momma so fat she sued Nintendo for guessing her weight',
+           'Yo momma so dumb, she tripped over WiFi',
+           'Yo momma so fat she has two watches, one for each timezone',
+           'Yo momma so fat she left the house in high heels and came back in flip flops',
+           'Yo momma so fat her blood type is Nutella',
+           'Yo momma so fat she uses Google Earth to take a selfie',
+           'Yo momma so fat even Dora could not explore her',
+           'Yo momma so fat she jumped in the air and got stuck',
+           'Yo momma so fat that when we were born, she gave the hospital stretch marks',
+           'Yo momma so fat she wears a sock on each toe',
+           'Yo momma so fat the army uses her underwear as parachutes',
+           'Yo momma so fat her patronus is a cake',
+           'Yo momma so fat when she tripped over on 4th Ave, she landed on 12th',
+           'Yo momma so fat the only way she burns calories is when her food is on fire',
+           'Yo momma so fat she won all 75 Hunger Games',
+           'Yo momma so fat when she steps on a scale it says "One at a time please"',
+           'Yo momma so fat she got her own area code',
+           'Yo momma so fat even Kirby can'' eat her',
+           'Yo momma so fat when she went to the beach Greenpeace threw her into the ocean',
+           'Yo momma so fat a vampire bit her and got Type 2 diabetes',
+           'Yo momma so fat she uses butter for her chapstick',
+           'Yo momma so fat when she walks backwards she beeps',
+           'Yo momma so fat she puts mayo on her diet pills']
+
+
+    
+
+    @commands.command()
+    async def yomomma(self, ctx, member:discord.Member=None):
+        if member == None:
+            return await ctx.send("I can't yomomma nobody!")
+        if member.bot:
+            return await ctx.send("Back off from my kind buddy")
+        if member == ctx.author:
+            return await ctx.send("Why do you wanna yomomma yourself?")
+        if member == self.client.user:
+            return await ctx.send("Why do you wanna yomomma me?")
+        else:
+            await ctx.send(member.mention)
+            await ctx.send(random.choice(self.choices))
+
+
+
+
+
+    @commands.group(invoke_without_command=True)
+    async def anime(self, ctx):
+        """
+        Anime gif commands
+        """
+        em = discord.Embed(title = "Anime Commands!", description = "Anime commands are: `rap anime wink`, `rap anime pat`, `rap anime hug`, `rap anime facepalm`", color = ctx.author.color)
+        em.set_footer(text = "Enjoy!")
+        await ctx.send(embed = em)
+
+    @anime.command(name='wink')
+    async def _anime_wink(self, ctx):
+        """
+        anime wink gif
+        """
+        try:
+            image = await self.bot.sr_api.get_gif('wink')
+        except:  # noqa: E722
+            return await ctx.send('Error with API, please try again later')
+        embed = discord.Embed(title='Wink')
+        embed.set_image(url=image.url)
+        await ctx.send(embed=embed)
+
+    @anime.command(name='pat')
+    async def _anime_pat(self, ctx):
+        """
+        anime pat gif
+        """
+        try:
+            image = await self.bot.sr_api.get_gif('pat')
+        except:  # noqa: E722
+            return await ctx.send('Error with API, please try again later')
+        embed = discord.Embed(title='Pat')
+        embed.set_image(url=image.url)
+        await ctx.send(embed=embed)
+
+    @anime.command(name='hug')
+    async def _anime_hug(self, ctx):
+        """
+        anime hug gif
+        """
+        try:
+            image = await self.bot.sr_api.get_gif('hug')
+        except:  # noqa: E722
+            return await ctx.send('Error with API, please try again later')
+        embed = discord.Embed(title='Hug')
+        embed.set_image(url=image.url)
+        await ctx.send(embed=embed)
+
+    @anime.command(name='facepalm', aliases=['fp'])
+    async def _anime_facepalm(self, ctx):
+        """
+        anime facepalm gif
+        """
+        try:
+            image = await self.bot.sr_api.get_gif('face-palm')
+        except:  # noqa: E722
+            return await ctx.send('Error with API, please try again later')
+        embed = discord.Embed(title='Face Palm')
+        embed.set_image(url=image.url)
+        await ctx.send(embed=embed)
+
+    @commands.command(aliases=["howhot", "hot"])
+    async def hotrate(self, ctx, *, user: discord.Member = None):
+        """ Returns a random percent for how hot is a discord user """
+        user = user or ctx.author
+
+        random.seed(user.id)
+        r = random.randint(1, 100)
+        hot = r / 1.17
+
+        if hot > 25:
+            emoji = "❤"
+        elif hot > 50:
+            emoji = "💖"
+        elif hot > 75:
+            emoji = "💞"
+        else:
+            emoji = "💔"
+
+        await ctx.send(f"**{user.name}** is **{hot:.2f}%** hot {emoji}")
+
+    @commands.command(name='minecraft', aliases=['mcuser'])
+    async def _minecraft(self, ctx, *, username):
+        """
+        minecraft user lookup
+        """
+        try:
+            user = await self.bot.sr_api.mc_user(username)
+        except:  # noqa: E722
+            return await ctx.send('Error with API, please try again later')
+        embed = discord.Embed(title=user.name, description=user.formatted_history)
+        embed.set_author(name=f'UUID: {user.uuid}')
+        await ctx.send(embed=embed)
+
+
+
+    @commands.command()
+    async def fact(self, ctx):
+      K = open("txt/facts.txt", "r")
+      fact = K.readlines()
+      embed = discord.Embed(
+        title = "Random Raptor Fact!",
+        description = random.choice(fact),
+        color = 0x00ff00
+      )
+      await ctx.send(embed=embed)
+
     @commands.command()
     async def art(self, ctx):
-        await ctx.send(" _______  _______  _______ _________ _______  _______ \n\
-(  ____ )(  ___  )(  ____ )\__   __/(  ___  )(  ____ )\n\
-| (    )|| (   ) || (    )|   ) (   | (   ) || (    )|\n\
-| (____)|| (___) || (____)|   | |   | |   | || (____)|\n\
-|     __)|  ___  ||  _____)   | |   | |   | ||     __)\n\
-| (\ (   | (   ) || (         | |   | |   | || (\ (   \n\
-| ) \ \__| )   ( || )         | |   | (___) || ) \ \__\n\
-|/   \__/|/     \||/          )_(   (_______)|/   \__/")
-
-    @commands.command()
-    async def kill(self, ctx, member : discord.Member, *,reason="we dont know"):
-        killembed1 = discord.Embed(title=f'{ctx.author} kills {member}',
-                                description=f'{ctx.author} kills {member.mention} because {reason}',
-                                color=0x000000)
-        killembed1.set_image(url='https://i.makeagif.com/media/1-01-2016/wXy365.gif')
-        #killembed1.set_footer(text='*Bot created by (tamrol077 on github)(Discord: tamrol073#6998)*')
-        killembed2 = discord.Embed(title=f'{ctx.author} kills {member}',
-                                description=f'{ctx.author} kills {member.mention} because {reason}',
-                                color=0x000000)
-        killembed2.set_image(url='https://media0.giphy.com/media/lnakxcfG2MFy/giphy.gif?cid=ecf05e472df4670f3de1b99cf0d4c74fda21a320f909db8f&rid=giphy.gif')
-        #killembed2.set_footer(text='*Bot created (tamrol077 on github)(Discord: tamrol073#6998)*')
-        killembed3 = discord.Embed(title=f'{ctx.author} kills {member}',
-                                description=f'{ctx.author} kills {member.mention} because {reason}',
-                                color=0x000000)
-        killembed3.set_image(url='https://media3.giphy.com/media/129bQn91wmtjiw/giphy.gif')
-        
-        killembed4 = discord.Embed(title=f'{ctx.author} kills {member}',
-                                description=f'{ctx.author} kills {member.mention} because {reason}',
-                                color=0x000000)
-        killembed4.set_image(url='https://www.gif-maniac.com/gifs/30/30172.gif')
-       
-        listakill = [killembed1, killembed2, killembed3, killembed4]
-        await ctx.send(embed=random.choice(listakill))
-
-
-    @kill.error
-    async def killerror(self, ctx,error):
-        if isinstance(error,commands.MissingRequiredArgument):
-            errore = discord.Embed(title=f'{ctx.author},you need to provide the right arguments',description=f'Check the syntax of the command in the help command.',color=0x000000)
-            \
-            await ctx.send(embed=errore)
+        embed=discord.Embed(
+        title = "Cool ASCII Art!",
+        description = """
+ ```fix
+  _______  _______  _______ _________ _______  _______ 
+  (  ____ )(  ___  )(  ____ )\__   __/(  ___  )(  ____ )
+  | (    )|| (   ) || (    )|   ) (   | (   ) || (    )|
+  | (____)|| (___) || (____)|   | |   | |   | || (____)|
+  |     __)|  ___  ||  _____)   | |   | |   | ||     __)
+  | (\ (   | (   ) || (         | |   | |   | || (\ (   
+  | ) \ \__| )   ( || )         | |   | (___) || ) \ \__
+  |/   \__/|/     \||/          )_(   (_______)|/   \__/
+        ```""",
+        color = 0x00ff00
+        )
+        await ctx.send(embed=embed)
 
     @commands.command()
     async def dance(self, ctx):
-        dance1 = discord.Embed(title=f'{ctx.author} dances',
-                            description='Hes probably very happy because yugoslavia reunited',
-                            color=0x000000)
+        dance1 = discord.Embed(title=f'{ctx.author} dances', description='Hes probably very happy because yugoslavia reunited', color=0x000000)
         dance1.set_image(url='https://media1.tenor.com/images/75f0038c50cc4e2262077eef48f576c3/tenor.gif?itemid=12740205')
         #dance1.set_footer(text='*Bot created by tamrol073#6998(github: tamrol077)*')
-        dance2 = discord.Embed(title=f'{ctx.author} dances',
-                            description='Hes probably very happy because yugoslavia reunited',
-                            color=0x000000)
+        dance2 = discord.Embed(title=f'{ctx.author} dances', description='Hes probably very happy because yugoslavia reunited', color=0x000000)
         dance2.set_image(url='https://media.tenor.com/images/c3b9522dbfe8be78ff4dc305c999013e/tenor.gif')
         #dance2.set_footer(text='*Bot created by tamrol073#6998(github: tamrol077)*')
         dance3 = discord.Embed(title=f'{ctx.author} dances',
-                            description='Hes probably very happy because yugoslavia reunited',
-                            color=0x000000)
+        description='Hes probably very happy because yugoslavia reunited', color=0x000000)
         dance3.set_image(url='https://media1.tenor.com/images/d736d9c410f88cb56a0f44a455e46464/tenor.gif?itemid=12740209')
         #dance3.set_footer(text='*Bot created by tamrol073#6998(github: tamrol077)*')
         dance4 = discord.Embed(title=f'{ctx.author} dances',
-                            description='Hes probably very happy because yugoslavia reunited',
-                            color=0x000000)
+        description='Hes probably very happy because yugoslavia reunited', color=0x000000)
         dance4.set_image(url='https://media1.tenor.com/images/61cf901b1c520204c5c185d4a4244b78/tenor.gif?itemid=13410605')
         #dance4.set_footer(text='*Bot created by tamrol073#6998(github: tamrol077)*')
         dances = [dance1, dance2, dance3, dance4]
@@ -97,18 +346,18 @@ class Fun(commands.Cog):
 
     @commands.command()
     async def suicide(self, ctx):
-        suicideembed = discord.Embed(title=f'{ctx.author} kills himself', description="He's probably sad", color=0x000000)
+        suicideembed = discord.Embed(title=f'{ctx.author} kills themself', description="their probably sad", color=0x000000)
         suicideembed.set_image(
                 url='https://media1.giphy.com/media/c6DIpCp1922KQ/giphy.gif')
             
-        suicideembed2 = discord.Embed(title=f'{ctx.author} kills himself',
-                description="He's probably sad",
+        suicideembed2 = discord.Embed(title=f'{ctx.author} kills themself',
+                description="their probably sad",
                 color=0x000000)
         suicideembed2.set_image(
             url='https://media1.tenor.com/images/041dddf7d24b9ba3d591e0bed2ce38c7/tenor.gif?itemid=4524247')
         
-        suicideembed3 = discord.Embed(title=f'{ctx.author} kills himself',
-                                    description="He's probably sad",
+        suicideembed3 = discord.Embed(title=f'{ctx.author} kills themself',
+                                    description="their probably sad",
                                     color=0x000000)
         suicideembed3.set_image(url='https://i.makeagif.com/media/9-14-2015/vyNnjt.gif')
 
@@ -147,18 +396,26 @@ class Fun(commands.Cog):
 
 
     @commands.command(aliases=['fite'])
-    async def fight(self, ctx, user1: discord.Member, user2: discord.Member = None):
-        if user2 == None:
+    async def fight(self, ctx, user: discord.Member,):
+        if user == None:
             return await ctx.send("You cant fight yourself??")
+        elif await ButtonConfirmation(ctx, f"You want to fight {user.mention}?", destructive=True, confirm="YES", cancel="No").run():
+            
 
-        win = random.randint(1, 2)
+            win = random.randint(1, 2)
 
-        if win == 1:
-            lose = user2
+            if win == 1:
+                lose = user
+                win = ctx.author
+            else:
+                lose = ctx.author
+                win = user
+
+            await ctx.send("%s beat %s!" % (win.mention, lose.mention,))
+
         else:
-            lose = user1
+            return await ctx.send("Ok then")
 
-        await ctx.send("%s beat %s!" % (win.mention, lose.mention,))
     
     @commands.command()
     async def hack(self, ctx, user:discord.Member=None):
@@ -174,7 +431,8 @@ class Fun(commands.Cog):
         if user.bot:
             await ctx.send("Back off from my kind you weirdo.")
             return
-        
+        if user.id == 801234598334955530:
+            await ctx.send("Want me to hack the owner?\n**FINE.**")
         em = discord.Embed(title = "Hack Complete!", description = f"{user.mention} is now hacked.", color = ctx.author.color)
         n = open("txt/ip.txt", "r")
         adf = n.readlines()
@@ -197,55 +455,55 @@ class Fun(commands.Cog):
                     await ctx.reply(f"Error when trying to hack {ctx.author}.")
                     await ses.close()
         use = user.display_name
-        message = await ctx.send(f" | Locating {use}")
+        message = await ctx.send(f" ▁ Locating {use}")
         await asyncio.sleep(1)
-        await message.edit(content=f" / Locating {use}")
+        await message.edit(content=f" ▂ Locating {use}")
         await asyncio.sleep(1)
-        await message.edit(content=f" - Locating {use}")
+        await message.edit(content=f" ▃ Locating {use}")
         await asyncio.sleep(1)
-        await message.edit(content=f" \ Locating {use}")
+        await message.edit(content=f" ▅ Locating {use}")
         await asyncio.sleep(1)
-        await message.edit(content=f" | Found {use}!")
+        await message.edit(content=f" ▆ Found {use}!")
         await asyncio.sleep(1)
-        await message.edit(content=f" / Installing `virus.exe` on {use}'s computer")
+        await message.edit(content=f" ▇ Installing `virus.exe` on {use}'s computer")
         await asyncio.sleep(1)
-        await message.edit(content=f" - Installing `virus.exe` on {use}'s computer")
+        await message.edit(content=f" ▉ Installing `virus.exe` on {use}'s computer")
         await asyncio.sleep(1)
-        await message.edit(content=f" \ Installing `virus.exe` on {use}'s computer")
+        await message.edit(content=f" █ Installing `virus.exe` on {use}'s computer")
         await asyncio.sleep(1)
-        await message.edit(content=f" | Installed `virus.exe` on {use}'s computer!")
+        await message.edit(content=f" ▁ Installed `virus.exe` on {use}'s computer!")
         await asyncio.sleep(1)
-        await message.edit(content=f" / Installing `hack.exe` on {use}'s computer")
+        await message.edit(content=f" ▃ Installing `hack.exe` on {use}'s computer")
         await asyncio.sleep(1)
-        await message.edit(content=f" - Installing `hack.exe` on {use}'s computer")
+        await message.edit(content=f" ▅ Installing `hack.exe` on {use}'s computer")
         await asyncio.sleep(1)
-        await message.edit(content=f" \ Installing `hack.exe` on {use}'s computer")
+        await message.edit(content=f" ▆ Installing `hack.exe` on {use}'s computer")
         await asyncio.sleep(1)
-        await message.edit(content=f" | Installed `hack.exe` on {use}'s computer!")
+        await message.edit(content=f" ▇ Installed `hack.exe` on {use}'s computer!")
         await asyncio.sleep(1)
-        await message.edit(content=f" / Opening `virus.exe` on {use}'s computer")
+        await message.edit(content=f" ▁ Opening `virus.exe` on {use}'s computer")
         await asyncio.sleep(1)
-        await message.edit(content=f" - Opening `virus.exe` on {use}'s computer")
+        await message.edit(content=f" ▏ Opening `virus.exe` on {use}'s computer")
         await asyncio.sleep(1)
-        await message.edit(content=f" \ Opening `virus.exe` on {use}'s computer")
+        await message.edit(content=f" ▔ Opening `virus.exe` on {use}'s computer")
         await asyncio.sleep(1)
-        await message.edit(content=f" | Opened `virus.exe` on {use}'s computer!")
+        await message.edit(content=f" ▕ Opened `virus.exe` on {use}'s computer!")
         await asyncio.sleep(1)
-        await message.edit(content=f" / Opening `hack.exe` on {use}'s computer")
+        await message.edit(content=f" ▁ Opening `hack.exe` on {use}'s computer")
         await asyncio.sleep(1)
-        await message.edit(content=f" - Opening `hack.exe` on {use}'s computer")
+        await message.edit(content=f" ▏ Opening `hack.exe` on {use}'s computer")
         await asyncio.sleep(1)
-        await message.edit(content=f" \ Opening `hack.exe` on {use}'s computer")
+        await message.edit(content=f" ▔ Opening `hack.exe` on {use}'s computer")
         await asyncio.sleep(1)
-        await message.edit(content=f" | Opened `hack.exe` on {use}'s computer!")
+        await message.edit(content=f" ▕ Opened `hack.exe` on {use}'s computer!")
         await asyncio.sleep(1)
-        await message.edit(content=f" / Finding {use}'s password")
+        await message.edit(content=f" ▂ Finding {use}'s password")
         await asyncio.sleep(1)
-        await message.edit(content=f" - Finding {use}'s password")
+        await message.edit(content=f" ▅ Finding {use}'s password")
         await asyncio.sleep(1)
-        await message.edit(content=f" \ Finding {use}'s password")
+        await message.edit(content=f" ▆ Finding {use}'s password")
         await asyncio.sleep(1)
-        await message.edit(content=f" | Found {use}'s password!")
+        await message.edit(content=f" ▇ Found {use}'s password!")
         await asyncio.sleep(1)
         await message.edit(content=f" / Finding {use}'s email")
         await asyncio.sleep(1)
@@ -269,7 +527,7 @@ class Fun(commands.Cog):
         await asyncio.sleep(1)
         await message.edit(content=f" \ Finding {use}'s credit card number")
         await asyncio.sleep(1)
-        await message.edit(content=f" | Found {use}'scredit card number!")
+        await message.edit(content=f" | Found {use}'s credit card number!")
         await asyncio.sleep(1)
         await message.edit(content=f"Hack Complete! Info Found 🔽")
         await asyncio.sleep(1)
@@ -351,7 +609,7 @@ class Fun(commands.Cog):
         rate_amount = random.randint(0, 100)
         await ctx.send(f"I'd rate `{thing}` a **{round(rate_amount, 4)} / 100**")
 
-    @commands.command(brief='Rickrolls someone...', description='Rickrolls someone... See thier reaction!', aliases=['rr'])
+    @commands.command(brief='Rickrolls someone...', description='Rickrolls someone... See thier reaction!')
     async def rickroll(self, ctx):
         em = discord.Embed(title = "Rickroll!", description = "Have Fun :P", color = ctx.author.color)
         em.set_image(url = 'https://media.tenor.com/images/a1505c6e6d37aa2b7c5953741c0177dc/tenor.gif')
@@ -393,7 +651,7 @@ class Fun(commands.Cog):
 
     @commands.command()
     async def joke(self, ctx):
-        f = open("joke.txt", "r")
+        f = open("txt/joke.txt", "r")
         abcdefg = f.readlines()
         await ctx.send(random.choice(abcdefg))
 
@@ -401,13 +659,13 @@ class Fun(commands.Cog):
 
     @commands.command()
     async def quote(self, ctx):
-        z = open("quote.txt", "r")
+        z = open("txt/quote.txt", "r")
         asd = z.readlines()
         await ctx.send(random.choice(asd))
 
     @commands.command()
     async def pun(self, ctx):
-        a = open("pun.txt", "r")
+        a = open("txt/pun.txt", "r")
         asdf = a.readlines()
         await ctx.send(random.choice(asdf))
 
@@ -521,6 +779,7 @@ class Fun(commands.Cog):
         except ApiException as e:
             await ctx.send("Error 101. Try again later")
             print("Error when calling gif api")
+            print(e)
 
     @commands.command()
     async def sticker(self, ctx, *, search_query):
@@ -540,25 +799,36 @@ class Fun(commands.Cog):
         except ApiException as e:
             await ctx.send("Error 101. Try again later")
             print("Error when calling gif api")
-
-
-
+            print(e)
     
+    @commands.command(name="token", aliases=['bottoken', 'faketoken'])
+    async def _token(self, ctx):
+        """
+        Get a discord bot token lol
+        """
+        try:
+            token = await self.client.sr_api.bot_token()
+        except:  # noqa: E722
+            return await ctx.send_error('Error with API, please try again later')
+        await ctx.send(token)
 
     @commands.command(aliases=['def'])
     async def define(self, ctx, search_term):
         def wiki_summary(self, arg):
             definition = wikipedia.summary(arg, sentences=3, chars=1000, auto_suggest=True, redirect=True)
             return definition
-        
+
         try:
-            words = ctx.message.content.split()
-            impor_words = words[1:]
-            src = discord.Embed(title="Searching... Found!", description=wiki_summary(self, impor_words), color = ctx.author.color)
-            await ctx.send(embed=src)
-        except wikipedia.exceptions.DisambiguationError as e:
-            e = list(e)
-            await ctx.send(wiki_summary(random.choice(e)))
+            try:
+                words = ctx.message.content.split()
+                impor_words = words[1:]
+                src = discord.Embed(title="Searching... Found!", description=wiki_summary(self, impor_words), color = ctx.author.color)
+                await ctx.send(embed=src)
+            except wikipedia.exceptions.DisambiguationError as e:
+                e = list(e)
+                await ctx.send(wiki_summary(random.choice(e)))
+        except:
+            await ctx.send("Not found")
 
 
     @commands.command(aliases=['dog'])
@@ -913,16 +1183,30 @@ class Fun(commands.Cog):
         em = discord.Embed(
             title = "Chatbot!",
             color = ctx.author.color,
-            timestamp = datetime.now()
+            timestamp = datetime.datetime.now()
         )
-        em.add_field(name = "Start", value = "Use `r!chatbot start` to start the chatbot!")
-        em.add_field(name = "End", value = "Use `r!chatbot end` to stop the chatbot! Please only use this if you have used `r!chatbot start`.")
+        em.add_field(name = "Start", value = "Use `rap chatbot start` to start the chatbot!")
+        em.add_field(name = "End", value = "Use `rap chatbot end` to stop the chatbot! Please only use this if you have used `rap chatbot start`.")
         em.set_footer(text = "Chatbot set up by Dragonic#9230", icon_url = "https://images-ext-2.discordapp.net/external/tjuvF_0QIEvojcvmrcTcA8QXu8qzmLqTPLjOOl-uMYY/%3Fsize%3D1024/https/cdn.discordapp.com/avatars/776944535141482506/86516d7d022b3e6e5026517980716c11.webp")
         await ctx.send(embed = em)
 
+    @commands.bot_has_permissions(administrator=True)
     @chatbot.command()
     async def start(self, ctx):
-        await ctx.send("In progress")
+        channel = await ctx.guild.create_text_channel("raptor-chatbot")
+        await ctx.send("Chatbot is now setup. Go check it out in " + channel.mention + " !")
+
+    @commands.has_permissions(administrator=True)
+    @commands.bot_has_permissions(administrator=True)
+    @chatbot.command()
+    async def stop(self, ctx, channel:discord.TextChannel):
+        if channel.name == "raptor-chatbot":
+            await channel.delete()
+            await ctx.send("Chatbot stopped. Use `rap chatbot start` to start it again!")
+
+        else:
+            await ctx.send("Either you haven't used `rap chatbot start` or you have manually deleted it.")
+
 
     @commands.command()
     async def video(self, ctx, *, video_name):

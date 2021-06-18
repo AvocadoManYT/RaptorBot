@@ -1,11 +1,12 @@
 import discord
 import json
 import datetime
-from main import prefix as pre, prefixes, owners
+from main import prefix as pre, owners
 from datetime import datetime
 from discord.ext import commands
 import asyncio
 import random
+import aiofiles
 import requests
 import json
 import aiohttp
@@ -30,6 +31,40 @@ class Utility(commands.Cog):
 
     # commands
 
+    @commands.command(aliases=['rr', 'reactrole'])
+    async def reactionrole(self, ctx, role: discord.Role=None, msg: discord.Message=None, emoji=None):
+        if role.position > ctx.author.top_role.position:
+          await ctx.channel.send("**:x: | That role is over your top role!**")
+          return
+        if role != None and msg != None and emoji != None:
+            await msg.add_reaction(emoji)
+            self.client.reaction_roles.append((role.id, msg.id, str(emoji.encode("utf-8"))))
+            
+            async with aiofiles.open("reaction_roles.txt", mode="a") as file:
+                emoji_utf = emoji.encode("utf-8")
+                await file.write(f"{role.id} {msg.id} {emoji_utf}\n")
+
+            await ctx.channel.send("Reaction has been set.")
+            
+        else:
+            await ctx.send("Invalid arguments. Maybe the msg id is invalid or emoji is invalid :shrug:")
+
+    @commands.Cog.listener()
+    async def on_raw_reaction_add(self, payload):
+        for role_id, msg_id, emoji in self.client.reaction_roles:
+            if msg_id == payload.message_id and emoji == str(payload.emoji.name.encode("utf-8")):
+                await payload.member.add_roles(self.client.get_guild(payload.guild_id).get_role(role_id))
+                return
+
+    @commands.Cog.listener()
+    async def on_raw_reaction_remove(self, payload):
+        for role_id, msg_id, emoji in self.client.reaction_roles:
+            if msg_id == payload.message_id and emoji == str(payload.emoji.name.encode("utf-8")):
+                guild = self.client.get_guild(payload.guild_id)
+                await guild.get_member(payload.user_id).remove_roles(guild.get_role(role_id))
+                return
+
+            
     @commands.command()
     async def feedback(self, ctx):
         await ctx.send("Let's start with this feedback session! Answer these questions within 20 seconds!")
@@ -219,34 +254,16 @@ class Utility(commands.Cog):
 
 
     @commands.command(help="Shows the bot's ping.")
-    async def ping(self, ctx, member:discord.Member=None):
-        if member == None:
-            member = ctx.author
-        em1 = discord.Embed(title = "<a:8104LoadingEmote:851517649389486180>", color = ctx.author.color)
-        em = discord.Embed(title="Pong! 🏓", description=f"{round(self.client.latency * 1000)}ms" , color = ctx.author.color)
-        msg = await ctx.send(embed = em1)
-        await asyncio.sleep(5)
-        await msg.edit(embed = em)
+    async def ping(self, ctx):
+      em1 = discord.Embed(title = "<a:8104LoadingEmote:851517649389486180>", color = ctx.author.color)
+      em = discord.Embed(title="Pong! 🏓", description=f"{round(self.client.latency * 1000)}ms" , color = ctx.author.color)
+      msg = await ctx.send(embed = em1)
+      await asyncio.sleep(5)
+      await msg.edit(embed = em)
 
     
 
-    @commands.command(help="Dm's a person if their dms are open.")
-    @commands.cooldown(1, 60, commands.BucketType.user)
-    async def dm(self, ctx, user_id=None, *, msg=None):
-        if ctx.author.id in owners:
-            if user_id != None and msg != None:
-                try:
-                    target = await self.client.fetch_user(user_id)
-                    await target.send(msg)
-
-                    await ctx.channel.send("'" + msg + "' sent to: " + target.name)
-
-                except:
-                    await ctx.channel.send("Couldn't dm the given user.")
-            else:
-                await ctx.channel.send("You didn't provide a user's id and/or a message.")
-        else:
-            await ctx.send("You're not my owner")
+    
             
 
        
@@ -435,18 +452,18 @@ class Utility(commands.Cog):
             emb = discord.Embed(title = "Got An error", description = f"```{self.traceback.format_exc()}```", color = ctx.author.color)
             await ctx.send(embed = emb)
 
-    @commands.command(aliases=['afk', 'Afk', 'aFk', 'afK','AFk', 'aFK', 'AfK'])
+    @commands.command()
     async def AFK(self, ctx, *, reason=None):
         cn = ctx.author.display_name
         if reason == None:
-            reason2 = 'I set your AFK \n Be sure to remove your afk with r!remafk or r!removeafk when you come back!'
+            reason2 = 'I set your AFK \n Be sure to remove your afk with rap remafk or rap removeafk when you come back!'
             reason = ''
             try:
                 await ctx.author.edit(nick=f"[AFK] {cn}")
             except:
                 pass
         else:
-            reason2 = f'I set your AFK, status: {reason} \n Be sure to remove your afk with r!remafk or r!removeafk when you come back!'
+            reason2 = f'I set your AFK, status: {reason} \n Be sure to remove your afk with rap remafk or rap removeafk when you come back!'
             try:
                 await ctx.author.edit(nick=f"[AFK] {cn}")
             except:
@@ -454,7 +471,7 @@ class Utility(commands.Cog):
         with open("afk.json", "r") as f:
             data = json.load(f)
         if str(ctx.author.id) in list(data[str(ctx.guild.id)]['AFK']):
-            await ctx.channel.send('You\'re already afk :/ \n Use r!remafk or r!removeafk to remove your afk!')
+            await ctx.channel.send('You\'re already afk :/ \n Use rap remafk or rap removeafk to remove your afk!')
             return
 
         
@@ -481,7 +498,7 @@ class Utility(commands.Cog):
             **__Commands__**
             **{pre}covid world** - This will return the global cases.
             **{pre}covid country <country>** - This will return the COVID-19 cases for the specified country
-            Command Example: r!covid country US
+            Command Example: rap covid country US
             To input a country it must be the abbreviation [here](https://sustainablesources.com/resources/country-abbreviations/) is a list of all country abbreviations.
             """
         )
@@ -530,25 +547,7 @@ class Utility(commands.Cog):
         t_rev = text[::-1].replace("@", "@\u200B").replace("&", "&\u200B")
         await ctx.send(f"🔁 {t_rev}")
 
-    @commands.command(aliases=["howhot", "hot"])
-    async def hotrate(self, ctx, *, user: discord.Member = None):
-        """ Returns a random percent for how hot is a discord user """
-        user = user or ctx.author
-
-        random.seed(user.id)
-        r = random.randint(1, 100)
-        hot = r / 1.17
-
-        if hot > 25:
-            emoji = "❤"
-        elif hot > 50:
-            emoji = "💖"
-        elif hot > 75:
-            emoji = "💞"
-        else:
-            emoji = "💔"
-
-        await ctx.send(f"**{user.name}** is **{hot:.2f}%** hot {emoji}")
+    
 
     
 
@@ -618,19 +617,7 @@ class Utility(commands.Cog):
 
     
 
-    @commands.command(aliases=['gc', 'getcode'])
-    async def get_code(self, ctx, *, cmd):
-        owners = [801234598334955530, 814226043924643880]
-        try:
-            if ctx.author.id in owners:
-                command = self.client.get_command(cmd)
-                embed = discord.Embed(title=f"**{cmd}!**", color = ctx.author.color)
-                embed.add_field(name = "Code:", value = f"```py\n{inspect.getsource(command.callback)}```")
-                await ctx.send(embed = embed)
-            else:
-                await ctx.send("You're not my owner.")
-        except:
-            await ctx.send("Either that is not a command or the code it too long to display.")
+    
 
     
 
@@ -651,17 +638,6 @@ class Utility(commands.Cog):
                 await ctx.send("You\'re not afk :/")
         with open("afk.json", "w") as f:
             json.dump(data, f, indent=4)
-
-    @commands.command(name = "prefixes", aliases=['pre', 'prefix'])
-    async def prefixs(self, ctx):
-        e = "My Prefixes :arrow_down: \n \n"
-        index = 0
-        for prefix in prefixes:
-            index += 1
-            e += f"**{index}.** {prefix}\n"
-        em = discord.Embed(title = "Prefixes!",description = e, color = ctx.author.color)
-        em.set_footer(text = "These are my prefixes!")
-        await ctx.send(embed = em)
 
 def setup(client):
     client.add_cog(Utility(client))
