@@ -282,9 +282,8 @@ class Fun(commands.Cog):
         """ Returns a random percent for how hot is a discord user """
         user = user or ctx.author
 
-        random.seed(user.id)
         r = random.randint(1, 100)
-        hot = r / 1.17
+        hot = r
 
         if hot > 25:
             emoji = "❤"
