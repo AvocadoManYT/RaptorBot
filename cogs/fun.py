@@ -10,10 +10,10 @@ from dpy_button_utils.confirmation import ButtonConfirmation
 import wikipedia
 import aiohttp
 import urllib, re
-import json
 import giphy_client
 from giphy_client.rest import ApiException
 from discord.ext import commands
+
 
 
 err_color = discord.Color.red()
@@ -39,6 +39,9 @@ class Fun(commands.Cog):
         data = response.json()
         fact = data['data']
         await ctx.send(fact)
+
+    
+  
 
 
     @commands.command(aliases=['ar'])
@@ -204,7 +207,7 @@ class Fun(commands.Cog):
         """
         Anime gif commands
         """
-        em = discord.Embed(title = "Anime Commands!", description = "Anime commands are: `rap anime wink`, `rap anime pat`, `rap anime hug`, `rap anime facepalm`", color = ctx.author.color)
+        em = discord.Embed(title = "Anime Commands!", description = "Anime commands are: `rap anime wink`, `rap anime pat`, `rap anime hug`, `rap anime facepalm`, `rap anime quote`", color = ctx.author.color)
         em.set_footer(text = "Enjoy!")
         await ctx.send(embed = em)
 
@@ -246,6 +249,20 @@ class Fun(commands.Cog):
         embed = discord.Embed(title='Hug')
         embed.set_image(url=image.url)
         await ctx.send(embed=embed)
+
+    @anime.command(name='quote')
+    async def _quote(self, ctx):
+        """
+        random anime quote
+        """
+        try:
+            quote = await self.client.sr_api.anime_quote()
+        except:  # noqa: E722
+            return await ctx.send_error('Error with API, please try again later')
+        embed = discord.Embed(title=quote.character, description=quote.quote, color = discord.Colour.random())
+        embed.set_author(name=quote.anime)
+        await ctx.send(embed=embed)
+
 
     @anime.command(name='facepalm', aliases=['fp'])
     async def _anime_facepalm(self, ctx):
