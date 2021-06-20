@@ -92,7 +92,7 @@ class Utility(commands.Cog):
        
 
 
-        channel = self.client.get_channel(850042687066734600)
+        channel = self.client.get_channel(855915040288276490)
 
         
 
@@ -139,7 +139,7 @@ class Utility(commands.Cog):
        
 
 
-        channel = self.client.get_channel(850042687066734600)
+        channel = self.client.get_channel(855915040288276490)
 
         
 
@@ -170,7 +170,7 @@ class Utility(commands.Cog):
         if message.author.bot:
             return
         
-        file = "afk.json"
+        file = "json/afk.json"
         with open(file, 'r') as f:
             data = json.load(f)
         if str(message.guild.id) not in list(data):
@@ -468,7 +468,7 @@ class Utility(commands.Cog):
                 await ctx.author.edit(nick=f"[AFK] {cn}")
             except:
                 pass
-        with open("afk.json", "r") as f:
+        with open("json/afk.json", "r") as f:
             data = json.load(f)
         if str(ctx.author.id) in list(data[str(ctx.guild.id)]['AFK']):
             await ctx.channel.send('You\'re already afk :/ \n Use rap remafk or rap removeafk to remove your afk!')
@@ -479,7 +479,7 @@ class Utility(commands.Cog):
         await ctx.channel.send(f'{ctx.author.mention} {reason2}')
         
 
-        with open("afk.json", "w") as f:
+        with open("json/afk.json", "w") as f:
             json.dump(data,f, indent = 4)
         try:
             await ctx.author.edit(nick='[AFK]'+ctx.author.name)
@@ -625,7 +625,7 @@ class Utility(commands.Cog):
     async def removeafk(self, ctx):
         message = ctx
 
-        with open("afk.json", "r") as f:
+        with open("json/afk.json", "r") as f:
             data = json.load(f)
             if str(message.author.id) in list(data[str(message.guild.id)]['AFK']):
                 data[str(message.guild.id)]["AFK"].pop(str(message.author.id))
@@ -636,7 +636,7 @@ class Utility(commands.Cog):
                     pass
             else:
                 await ctx.send("You\'re not afk :/")
-        with open("afk.json", "w") as f:
+        with open("json/afk.json", "w") as f:
             json.dump(data, f, indent=4)
 
 def setup(client):

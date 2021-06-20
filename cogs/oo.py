@@ -3,8 +3,7 @@ from discord.ext import commands
 from main import owners
 import json
 import os
-from jishaku.codeblocks import codeblock_converter
-import asyncio
+
 import inspect
 from discord.ext.commands import Cog as c
 
@@ -17,7 +16,6 @@ class Owner(c, name = "OwnerOnly"):
     async def on_ready(self):
         print("Owner only cmds are ready")
 
-     
 
     @commands.command()
     @commands.is_owner()
