@@ -24,6 +24,7 @@ class Fun(commands.Cog):
     def __init__(self, client):
         self.client = client
         self.malid = None
+
         self.loop = asyncio.get_event_loop()
         self.bot = client
         self.session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30))

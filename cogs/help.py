@@ -123,7 +123,7 @@ class MyHelpCommand(commands.HelpCommand):
 
         embed.add_field(name = "Command Cog", value = f"```fix\n{command.cog_name}```")
 
-        embed.add_field(name = "Cooldown:", value= f"```fix\n{round(command.get_cooldown_retry_after(ctx))}```")
+        
         embed.set_footer(text = "<> means required and [] means optional")
        
         await ctx.send(embed=embed)

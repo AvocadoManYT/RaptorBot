@@ -192,19 +192,6 @@ version = "1.1.5"
 
 [[package]]
 category = "main"
-description = "A helper module for discord.py"
-name = "discord-helpers"
-optional = false
-python-versions = "*"
-version = "0.0.3"
-
-[package.dependencies]
-aiohttp = "*"
-aiosqlite = "*"
-"discord.py" = "*"
-
-[[package]]
-category = "main"
 description = "A Python wrapper for the Discord API"
 name = "discord.py"
 optional = false
@@ -284,6 +271,20 @@ version = "1.0.1"
 [package.dependencies]
 beautifulsoup4 = "4.9.3"
 requests = "2.25.1"
+
+[[package]]
+category = "main"
+description = "Free Google Translate API for Python. Translates totally free of charge."
+name = "googletrans2"
+optional = false
+python-versions = "*"
+version = "2.3.0"
+
+[package.dependencies]
+requests = "*"
+
+[package.extras]
+h2 = ["hyper"]
 
 [[package]]
 category = "main"
@@ -911,7 +912,7 @@ python-versions = "*"
 version = "2021.5.16"
 
 [metadata]
-content-hash = "c3a7aa6c6ff112367dbe742178cb1cdf26e4898fa9246fd11b99606ea85ac897"
+content-hash = "638189a74a0f1e74b2f2970789767c62bf5c88f1983a2e7b66fa98493bf4ee14"
 python-versions = "^3.8"
 
 [metadata.files]
@@ -1073,10 +1074,6 @@ discord-ext-games = [
     {file = "discord-ext-games-1.1.5.tar.gz", hash = "sha256:2b69241a51d2f02ffd69120ebd743bbf2a285ba016d2f3cdd6aae6608dc05266"},
     {file = "discord_ext_games-1.1.5-py3-none-any.whl", hash = "sha256:3807cf54f2c712acdfcf48401c28d749ba1743b20c73838d15afab631d35667d"},
 ]
-discord-helpers = [
-    {file = "discord-helpers-0.0.3.tar.gz", hash = "sha256:49d2e6c8e1f8cea64be1a39540a851fff1ed433424f3e7cc080de1ecb60f00a9"},
-    {file = "discord_helpers-0.0.3-py3-none-any.whl", hash = "sha256:03a1db38936785d5be96c7fa1306b7189298a5e88496d6575af3045872f770ae"},
-]
 "discord.py" = [
     {file = "discord.py-1.7.2-py3-none-any.whl", hash = "sha256:f179db299c949a8cf0a12c1b1b94d0da9a18e088857154d93ae5ab1d807ec61d"},
     {file = "discord.py-1.7.2.tar.gz", hash = "sha256:114e76cd27362fb919abf7f001a2dbdc77c9a67cff74ed6a89aecd6582ee298e"},
@@ -1099,6 +1096,9 @@ giphy-client = [
 googlesearch-python = [
     {file = "googlesearch-python-1.0.1.tar.gz", hash = "sha256:4392d99ec0bff58eb2b6074f34559462c5b99a31886d48d81e3ed414163e281b"},
     {file = "googlesearch_python-1.0.1-py3-none-any.whl", hash = "sha256:1e1286941a1ea029de4cf7b56a5151ef85324e288e9b41c2c3b81bb945b44427"},
+]
+googletrans2 = [
+    {file = "googletrans2-2.3.0.tar.gz", hash = "sha256:096938b65a941683e860f651ed3cacee3de8a9ace015de2ed4af621854c0b906"},
 ]
 h11 = [
     {file = "h11-0.12.0-py3-none-any.whl", hash = "sha256:36a3cb8c0a032f56e2da7084577878a035d3b61d104230d4bd49c0c6b555a9c6"},
