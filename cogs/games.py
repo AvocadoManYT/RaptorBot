@@ -4,6 +4,7 @@ import asyncio
 from games import wumpas as wumpus, minesweeper
 import requests
 import html
+import re
 from discord.ext import commands
 from random import randint
 
@@ -29,7 +30,132 @@ winningConditions = [
 ]
 
 
+class Board:
+    def __init__(self, player1, player2):
+        # Our board just needs to be a 3x3 grid. To keep formatting nice, each one is going to be a space to start
+        self.board = [[" ", " ", " "], [" ", " ", " "], [" ", " ", " "]]
 
+        # Randomize who goes first when the board is created
+        if random.SystemRandom().randint(0, 1):
+            self.challengers = {"x": player1, "o": player2}
+        else:
+            self.challengers = {"x": player2, "o": player1}
+
+        # X's always go first
+        self.X_turn = True
+
+    def full(self):
+        # For this check we just need to see if there is a space anywhere, if there is then we're not full
+        for row in self.board:
+            if " " in row:
+                return False
+        return True
+
+    def can_play(self, player):
+        # Simple check to see if the player is the one that's up
+        if self.X_turn:
+            return player == self.challengers["x"]
+        else:
+            return player == self.challengers["o"]
+
+    def update(self, x, y):
+        # If it's x's turn, we place an x, otherwise place an o
+        letter = "x" if self.X_turn else "o"
+        # Make sure the place we're trying to update is blank, we can't override something
+        if self.board[x][y] == " ":
+            self.board[x][y] = letter
+        else:
+            return False
+        # If we were succesful in placing the piece, we need to switch whose turn it is
+        self.X_turn = not self.X_turn
+        return True
+
+    def check(self):
+        # Checking all possiblities will be fun...
+        # First base off the top-left corner, see if any possiblities with that match
+        # We need to also make sure that the place is not blank, so that 3 in a row that are blank doesn't cause a 'win'
+        # Top-left, top-middle, top right
+        if (
+            self.board[0][0] == self.board[0][1]
+            and self.board[0][0] == self.board[0][2]
+            and self.board[0][0] != " "
+        ):
+            return self.challengers[self.board[0][0]]
+        # Top-left, middle-left, bottom-left
+        if (
+            self.board[0][0] == self.board[1][0]
+            and self.board[0][0] == self.board[2][0]
+            and self.board[0][0] != " "
+        ):
+            return self.challengers[self.board[0][0]]
+        # Top-left, middle, bottom-right
+        if (
+            self.board[0][0] == self.board[1][1]
+            and self.board[0][0] == self.board[2][2]
+            and self.board[0][0] != " "
+        ):
+            return self.challengers[self.board[0][0]]
+
+        # Next check the top-right corner, not re-checking the last possiblity that included it
+        # Top-right, middle-right, bottom-right
+        if (
+            self.board[0][2] == self.board[1][2]
+            and self.board[0][2] == self.board[2][2]
+            and self.board[0][2] != " "
+        ):
+            return self.challengers[self.board[0][2]]
+        # Top-right, middle, bottom-left
+        if (
+            self.board[0][2] == self.board[1][1]
+            and self.board[0][2] == self.board[2][0]
+            and self.board[0][2] != " "
+        ):
+            return self.challengers[self.board[0][2]]
+
+        # Next up, bottom-right corner, only one possiblity to check here, other two have been checked
+        # Bottom-right, bottom-middle, bottom-left
+        if (
+            self.board[2][2] == self.board[2][1]
+            and self.board[2][2] == self.board[2][0]
+            and self.board[2][2] != " "
+        ):
+            return self.challengers[self.board[2][2]]
+
+        # No need to check the bottom-left, all posiblities have been checked now
+        # Base things off the middle now, as we only need the two 'middle' possiblites that aren't diagonal
+        # Top-middle, middle, bottom-middle
+        if (
+            self.board[1][1] == self.board[0][1]
+            and self.board[1][1] == self.board[2][1]
+            and self.board[1][1] != " "
+        ):
+            return self.challengers[self.board[1][1]]
+        # Left-middle, middle, right-middle
+        if (
+            self.board[1][1] == self.board[1][0]
+            and self.board[1][1] == self.board[1][2]
+            and self.board[1][1] != " "
+        ):
+            return self.challengers[self.board[1][1]]
+
+        # Otherwise nothing has been found, return None
+        return None
+
+    def __str__(self):
+        # Simple formatting here when you look at it, enough spaces to even out where everything is
+        # Place whatever is at the grid in place, whether it's x, o, or blank
+        _board = " {}  |  {}  |  {}\n".format(
+            self.board[0][0], self.board[0][1], self.board[0][2]
+        )
+        _board += "———————————————\n"
+        _board += " {}  |  {}  |  {}\n".format(
+            self.board[1][0], self.board[1][1], self.board[1][2]
+        )
+        _board += "———————————————\n"
+        _board += " {}  |  {}  |  {}\n".format(
+            self.board[2][0], self.board[2][1], self.board[2][2]
+        )
+        return "```\n{}```".format(_board)
 
 
 class Games(commands.Cog):
@@ -53,7 +179,293 @@ class Games(commands.Cog):
     global i
     i = 0
 
-
+    @commands.command(name='connect4', aliases=['c4', 'connectfour'])
+    async def connect4(self,ctx: commands.Context,opponent="",width=7,height=6):
+        #-------------- Help section ------------------#
+        if(opponent=="" or opponent.find('help')!=-1):
+            em = discord.Embed()
+            em.title = f'Usage: {ctx.prefix}connect4 opponent [width] [height]'
+            em.description = f'Challenges opponent to a game of connect 4. The Opponent should be @mentoned to start\nBoard is default 7x6 large if not specified, though you usually wont need any board larger than that.\nMax board volume is 95 due to character limitations'
+            em.add_field(name="Example", value=f"{ctx.prefix}connect4 @Username\n{ctx.prefix}connect4 @Username 10 9", inline=False)
+            em.color = 0x22BBFF
+            await ctx.send(embed=em)
+            return
+        #----------------------------------------------#
+        # Remove challenge message
+        await ctx.channel.delete_messages(await self.getMessages(ctx,1))
+        
+        # Game init
+        resized = False
+        if(width*height > 95):
+            width = 7
+            height = 6
+            resized = True
+        player1 = ctx.message.mentions[0].name
+        player2 = ctx.message.author.name
+        s = ':black_large_square:'
+        p1 = ':blue_circle:'
+        p2 = ':red_circle:'
+        board = []
+        for column in range(height):
+            rowArr = []
+            for row in range(width):
+                rowArr.append(s)
+            board.append(rowArr)
+        def getDisplay():
+            toDisplay = ""
+            for y in range(height):
+                for x in range(width-1):
+                    toDisplay+=board[y][x]+'|'
+                toDisplay+=board[y][width-1] + '\n'
+            return(toDisplay)
+        
+        boardMessage = None
+        em = discord.Embed()
+        if(player1==player2):
+            em.title = f"{player2} challenged themselves to a game of Connect 4 \n(wow you're lonely)"
+        else:
+            em.title = f'{player2} challenged {player1} to a game of Connect 4'
+        em.description = f"{getDisplay()}"
+        em.color = 0x444444
+        em.add_field(name=f"{player1}", value=f"Type a number from 1-{width} to accept and place your first piece, or type 'decline' to refuse", inline=False)
+        if resized:
+            em.add_field(name="Note", value=f"Original board length was too large, defaulted to 7x6", inline=False)
+        await ctx.send(embed=em)
+        async for x in ctx.channel.history(limit = 1):
+            boardMessage = x
+        badInput = 0
+        turns = 1
+        currentPlayer = player1
+        otherPlayer = player2
+        currentPlayerId=1
+        while True:
+            try:
+                msg = await self.bot.wait_for('message',check=lambda message: message.author.name == player1, timeout=30)
+                if(msg.content=='decline'):
+                    em = discord.Embed()
+                    if(player1==player2):
+                        em.title = f"{player2} challenged themselves to a game of Connect 4 (wow you're lonely)"
+                    else:
+                        em.title = f'{player2} challenged {player1} to a game of Connect 4'
+                    em.description = f"{getDisplay()}"
+                    em.color = 0x444444
+                    em.add_field(name=f"{player1}", value="Challenge refused", inline=False)
+                    await boardMessage.edit(embed=em)
+                    return
+                
+                slot = int(msg.content)
+                if(slot<1 or slot>width):
+                    raise ValueError
+                await ctx.channel.delete_messages(await self.getMessages(ctx,1))
+                board[height-1][slot-1] = p1
+                gameLoop = True
+                currentPlayer = player2
+                otherPlayer = player1
+                turns +=1
+                currentPlayerId=2
+                break;
+            except asyncio.exceptions.TimeoutError:
+                em = discord.Embed()
+                if(player1==player2):
+                    em.title = f"{player2} challenged themselves to a game of Connect 4 (wow you're lonely)"
+                else:
+                    em.title = f'{player2} challenged {player1} to a game of Connect 4'
+                em.description = f"{getDisplay()}"
+                em.color = 0x444444
+                em.add_field(name=f"{player1}", value="Game timed out", inline=False)
+                await boardMessage.edit(embed=em)
+                return
+            except ValueError:
+                em = discord.Embed()
+                if(player1==player2):
+                    em.title = f"{player2} challenged themselves to a game of Connect 4 (wow you're lonely)"
+                else:
+                    em.title = f'{player2} challenged {player1} to a game of Connect 4'
+                em.description = f"{getDisplay()}"
+                em.color = 0x444444
+                em.add_field(name=f"{player1}", value=f"Enter a valid number from 1-{width}", inline=False)
+                await boardMessage.edit(embed=em)
+                badInput+=1
+            if(badInput==3):
+                em = discord.Embed()
+                if(player1==player2):
+                    em.title = f"{player2} challenged themselves to a game of Connect 4 (wow you're lonely)"
+                else:
+                    em.title = f'{player2} challenged {player1} to a game of Connect 4'
+                em.description = f"{getDisplay()}"
+                em.color = 0x444444
+                em.add_field(name=f"{player1}", value="Did not enter a valid number in 3 tries. Game ended.", inline=False)
+                await boardMessage.edit(embed=em)
+                return
+        winningComment=""
+        winner=""
+        while gameLoop:
+            if(turns==width*height):
+                winner=None
+                break;
+            ################################
+            #check for winning combinations#
+            ################################
+            # Horizontal
+            for y in range(height):
+                for x in range(width-3):
+                    if(board[y][x]==board[y][x+1] and board[y][x]==board[y][x+2] and board[y][x]==board[y][x+3] and board[y][x]!=s):
+                        if(board[y][x]==p1):
+                            board[y][x] = ':large_blue_diamond:'
+                            board[y][x+1] = ':large_blue_diamond:'
+                            board[y][x+2] = ':large_blue_diamond:'
+                            board[y][x+3] = ':large_blue_diamond:'
+                        elif(board[y][x]==p2):
+                            board[y][x]=":diamonds:"
+                            board[y][x+1]=":diamonds:"
+                            board[y][x+2]=":diamonds:"
+                            board[y][x+3]=":diamonds:"
+                        print("winner")
+                        winner=otherPlayer
+                        winningComment = f"{otherPlayer} connected 4 in a horizontal row"
+                        break
+                if(winner!=""):
+                    break
+            #Vertical
+            for y in range(height-3):
+                for x in range(width):
+                    if(board[y][x]==board[y+1][x] and board[y][x]==board[y+2][x] and board[y][x]==board[y+3][x] and board[y][x]!=s):
+                        if(board[y][x]==p1):
+                            board[y][x] = ':large_blue_diamond:'
+                            board[y+1][x] = ':large_blue_diamond:'
+                            board[y+2][x] = ':large_blue_diamond:'
+                            board[y+3][x] = ':large_blue_diamond:'
+                        elif(board[y][x]==p2):
+                            board[y][x]=":diamonds:"
+                            board[y+1][x]=":diamonds:"
+                            board[y+2][x]=":diamonds:"
+                            board[y+3][x]=":diamonds:"
+                        winner = otherPlayer
+                        winningComment = f"{otherPlayer} connected 4 in a vertical row"
+                        break
+                if(winner!=""):
+                    break      
+            # diagonal \
+            for y in range(height-3):
+                for x in range(width-3):
+                    if(board[y][x]==board[y+1][x+1] and board[y][x]==board[y+2][x+2] and board[y][x]==board[y+3][x+3] and board[y][x]!=s):
+                        if(board[y][x]==p1):
+                            board[y][x] = ':large_blue_diamond:'
+                            board[y+1][x+1] = ':large_blue_diamond:'
+                            board[y+2][x+2] = ':large_blue_diamond:'
+                            board[y+3][x+3] = ':large_blue_diamond:'
+                        elif(board[y][x]==p2):
+                            board[y][x]=":diamonds:"
+                            board[y+1][x+1]=":diamonds:"
+                            board[y+2][x+2]=":diamonds:"
+                            board[y+3][x+3]=":diamonds:"
+                        winner = otherPlayer
+                        winningComment = f"{otherPlayer} connected 4 in a \ diagonal"
+                        break
+                if(winner!=""):
+                    break    
+            # diagonal /
+            for y in range(height-3):
+                for x in range(3,width):
+                    if(board[y][x]==board[y+1][x-1] and board[y][x]==board[y+2][x-2] and board[y][x]==board[y+3][x-3] and board[y][x]!=s):
+                        if(board[y][x]==p1):
+                            board[y][x] = ':large_blue_diamond:'
+                            board[y+1][x-1] = ':large_blue_diamond:'
+                            board[y+2][x-2] = ':large_blue_diamond:'
+                            board[y+3][x-3] = ':large_blue_diamond:'
+                        elif(board[y][x]==p2):
+                            board[y][x]=":diamonds:"
+                            board[y+1][x-1]=":diamonds:"
+                            board[y+2][x-2]=":diamonds:"
+                            board[y+3][x-3]=":diamonds:"
+                        winner = otherPlayer
+                        winningComment = f"{otherPlayer} connected 4 in a / diagonal"
+                        break
+                if(winner!=""):
+                    break    
+            if(winner!=""):
+                break
+            ################################
+            em = discord.Embed()
+            em.title = f'Connect 4'
+            em.description = f"{getDisplay()}"
+            em.color = 0x444444
+            em.add_field(name=f"Turn {turns}: {currentPlayer} turn", value=f"Enter a value from 1-{width}. You have 30 seconds to make a choice", inline=True)
+            await boardMessage.edit(embed=em)
+            gotValidInput = False
+            badInput = 0
+            while not gotValidInput:
+                try:
+                    msg = await self.bot.wait_for('message',check=lambda message: message.author.name == currentPlayer, timeout=30)
+                    await ctx.channel.delete_messages(await self.getMessages(ctx,1))
+                    slot = int(msg.content)
+                    if(slot<1 or slot>width):
+                        raise ValueError
+                    # Place piece in slot
+                    for y in range(height-1,-1,-1):
+                        if(board[y][slot-1]==s):
+                            if(currentPlayerId == 1):
+                                board[y][slot-1] = p1
+                                break;
+                            else:
+                                board[y][slot-1] = p2
+                                break;
+                        elif(y==0): #if column is full
+                            raise ValueError
+                    # switch player
+                    if(currentPlayerId == 1):
+                        currentPlayer = player1
+                        otherPlayer = player2
+                        currentPlayerId = 2
+                    else:
+                        currentPlayer = player1
+                        otherPlayer = player2
+                        currentPlayerId = 1
+                    gotValidInput=True
+                    turns+=1
+                    break
+                except asyncio.exceptions.TimeoutError:
+                    winner=otherPlayer
+                    winningComment=f"{currentPlayer} took too much time"
+                    gameLoop = False
+                    break
+                except ValueError:
+                    em = discord.Embed()
+                    em.title = f'Connect 4'
+                    em.description = f"{getDisplay()}"
+                    em.color = 0x444444
+                    em.add_field(name=f"Turn {turns}: {currentPlayer}", value=f"Enter a valid number from 1-{width}", inline=False)
+                    await boardMessage.edit(embed=em)
+                    badInput+=1
+                if(badInput==3):
+                    winner=otherPlayer
+                    winningComment=f"{currentPlayer} had too many bad inputs"
+                    gameLoop = False
+                    break
+        if(winner==None):
+            em = discord.Embed()
+            em.title = f'Connect 4 - Tie, No Winners'
+            em.description = f"{getDisplay()}"
+            em.color = 0x444444
+            await boardMessage.edit(embed=em)
+        elif(winner==player1):
+            em = discord.Embed()
+            em.title = f'Connect 4 - {player1} wins!'
+            em.description = f"{getDisplay()}"
+            em.add_field(name="Reason:", value=f"{winningComment}", inline=False)
+            if(player1==player2):
+                em.add_field(name="Also:", value=f"They won against themself", inline=False)
+            em.color = 0x444444
+            await boardMessage.edit(embed=em)
+        elif(winner==player2):
+            em = discord.Embed()
+            em.title = f'Connect 4 - {player2} wins!'
+            em.description = f"{getDisplay()}"
+            em.add_field(name="Reason:", value=f"{winningComment}", inline=False)
+            if(player1==player2):
+                em.add_field(name="Also:", value=f"They won against themself", inline=False)
+            em.color = 0x444444
+            await boardMessage.edit(embed=em)
 
     @commands.command(aliases=['russianr', 'roulette'])
     async def russianroulette(self, ctx):
@@ -336,293 +748,7 @@ class Games(commands.Cog):
     
     
 
-    @commands.command(name='connectfour', aliases=['c4', 'connect4'])
-    async def connect4(self,ctx: commands.Context,opponent="",width=7,height=6):
-        #-------------- Help section ------------------#
-        if(opponent=="" or opponent.find('help')!=-1):
-            em = discord.Embed()
-            em.title = f'Usage: rap connect4 opponent [width] [height]'
-            em.description = f'Challenges opponent to a game of connect 4. The Opponent should be @mentoned to start\nBoard is default 7x6 large if not specified, though you usually wont need any board larger than that.\nMax board volume is 95 due to character limitations'
-            em.add_field(name="Example", value="rap connect4 @Username\nrap connect4 @Username 10 9", inline=False)
-            em.color = 0x22BBFF
-            await ctx.send(embed=em)
-            return
-        #----------------------------------------------#
-        # Remove challenge message
-        await ctx.channel.delete_messages(await self.getMessages(ctx,1))
-        
-        # Game init
-        resized = False
-        if(width*height > 95):
-            width = 7
-            height = 6
-            resized = True
-        player1 = ctx.message.mentions[0].name
-        player2 = ctx.message.author.name
-        s = ':black_large_square:'
-        p1 = ':blue_circle:'
-        p2 = ':red_circle:'
-        board = []
-        for column in range(height):
-            rowArr = []
-            for row in range(width):
-                rowArr.append(s)
-            board.append(rowArr)
-        def getDisplay(self):
-            toDisplay = ""
-            for y in range(height):
-                for x in range(width-1):
-                    toDisplay+=board[y][x]+'|'
-                toDisplay+=board[y][width-1] + '\n'
-            return(toDisplay)
-        
-        boardMessage = None
-        em = discord.Embed()
-        if(player1==player2):
-            em.title = f"{player2} challenged themselves to a game of Connect 4 \n(wow you're lonely)"
-        else:
-            em.title = f'{player2} challenged {player1} to a game of Connect 4'
-        em.description = f"{self.getDisplay()}"
-        em.color = 0x444444
-        em.add_field(name=f"{player1}", value=f"Type a number from 1-{width} to accept and place your first piece, or type 'decline' to refuse", inline=False)
-        if resized:
-            em.add_field(name="Note", value=f"Original board length was too large, defaulted to 7x6", inline=False)
-        await ctx.send(embed=em)
-        async for x in ctx.channel.history(limit = 1):
-            boardMessage = x
-        badInput = 0
-        turns = 1
-        currentPlayer = player1
-        otherPlayer = player2
-        currentPlayerId=1
-        while True:
-            try:
-                msg = await self.client.wait_for('message',check=lambda message: message.author.name == player1, timeout=30)
-                if(msg.content=='decline'):
-                    em = discord.Embed()
-                    if(player1==player2):
-                        em.title = f"{player2} challenged themselves to a game of Connect 4 (wow you're lonely)"
-                    else:
-                        em.title = f'{player2} challenged {player1} to a game of Connect 4'
-                    em.description = f"{self.getDisplay()}"
-                    em.color = 0x444444
-                    em.add_field(name=f"{player1}", value="Challenge refused", inline=False)
-                    await boardMessage.edit(embed=em)
-                    return
-                
-                slot = int(msg.content)
-                if(slot<1 or slot>width):
-                    raise ValueError
-                await ctx.channel.delete_messages(await self.getMessages(ctx,1))
-                board[height-1][slot-1] = p1
-                gameLoop = True
-                currentPlayer = player2
-                otherPlayer = player1
-                turns +=1
-                currentPlayerId=2
-                break;
-            except asyncio.exceptions.TimeoutError:
-                em = discord.Embed()
-                if(player1==player2):
-                    em.title = f"{player2} challenged themselves to a game of Connect 4 (wow you're lonely)"
-                else:
-                    em.title = f'{player2} challenged {player1} to a game of Connect 4'
-                em.description = f"{self.getDisplay()}"
-                em.color = 0x444444
-                em.add_field(name=f"{player1}", value="Game timed out", inline=False)
-                await boardMessage.edit(embed=em)
-                return
-            except ValueError:
-                em = discord.Embed()
-                if(player1==player2):
-                    em.title = f"{player2} challenged themselves to a game of Connect 4 (wow you're lonely)"
-                else:
-                    em.title = f'{player2} challenged {player1} to a game of Connect 4'
-                em.description = f"{self.getDisplay()}"
-                em.color = 0x444444
-                em.add_field(name=f"{player1}", value=f"Enter a valid number from 1-{width}", inline=False)
-                await boardMessage.edit(embed=em)
-                badInput+=1
-            if(badInput==3):
-                em = discord.Embed()
-                if(player1==player2):
-                    em.title = f"{player2} challenged themselves to a game of Connect 4 (wow you're lonely)"
-                else:
-                    em.title = f'{player2} challenged {player1} to a game of Connect 4'
-                em.description = f"{self.getDisplay()}"
-                em.color = 0x444444
-                em.add_field(name=f"{player1}", value="Did not enter a valid number in 3 tries. Game ended.", inline=False)
-                await boardMessage.edit(embed=em)
-                return
-        winningComment=""
-        winner=""
-        while gameLoop:
-            if(turns==width*height):
-                winner=None
-                break;
-            ################################
-            #check for winning combinations#
-            ################################
-            # Horizontal
-            for y in range(height):
-                for x in range(width-3):
-                    if(board[y][x]==board[y][x+1] and board[y][x]==board[y][x+2] and board[y][x]==board[y][x+3] and board[y][x]!=s):
-                        if(board[y][x]==p1):
-                            board[y][x] = ':large_blue_diamond:'
-                            board[y][x+1] = ':large_blue_diamond:'
-                            board[y][x+2] = ':large_blue_diamond:'
-                            board[y][x+3] = ':large_blue_diamond:'
-                        elif(board[y][x]==p2):
-                            board[y][x]=":diamonds:"
-                            board[y][x+1]=":diamonds:"
-                            board[y][x+2]=":diamonds:"
-                            board[y][x+3]=":diamonds:"
-                        print("winner")
-                        winner=otherPlayer
-                        winningComment = f"{otherPlayer} connected 4 in a horizontal row"
-                        break
-                if(winner!=""):
-                    break
-            #Vertical
-            for y in range(height-3):
-                for x in range(width):
-                    if(board[y][x]==board[y+1][x] and board[y][x]==board[y+2][x] and board[y][x]==board[y+3][x] and board[y][x]!=s):
-                        if(board[y][x]==p1):
-                            board[y][x] = ':large_blue_diamond:'
-                            board[y+1][x] = ':large_blue_diamond:'
-                            board[y+2][x] = ':large_blue_diamond:'
-                            board[y+3][x] = ':large_blue_diamond:'
-                        elif(board[y][x]==p2):
-                            board[y][x]=":diamonds:"
-                            board[y+1][x]=":diamonds:"
-                            board[y+2][x]=":diamonds:"
-                            board[y+3][x]=":diamonds:"
-                        winner = otherPlayer
-                        winningComment = f"{otherPlayer} connected 4 in a vertical row"
-                        break
-                if(winner!=""):
-                    break      
-            # diagonal \
-            for y in range(height-3):
-                for x in range(width-3):
-                    if(board[y][x]==board[y+1][x+1] and board[y][x]==board[y+2][x+2] and board[y][x]==board[y+3][x+3] and board[y][x]!=s):
-                        if(board[y][x]==p1):
-                            board[y][x] = ':large_blue_diamond:'
-                            board[y+1][x+1] = ':large_blue_diamond:'
-                            board[y+2][x+2] = ':large_blue_diamond:'
-                            board[y+3][x+3] = ':large_blue_diamond:'
-                        elif(board[y][x]==p2):
-                            board[y][x]=":diamonds:"
-                            board[y+1][x+1]=":diamonds:"
-                            board[y+2][x+2]=":diamonds:"
-                            board[y+3][x+3]=":diamonds:"
-                        winner = otherPlayer
-                        winningComment = f"{otherPlayer} connected 4 in a \ diagonal"
-                        break
-                if(winner!=""):
-                    break    
-            # diagonal /
-            for y in range(height-3):
-                for x in range(3,width):
-                    if(board[y][x]==board[y+1][x-1] and board[y][x]==board[y+2][x-2] and board[y][x]==board[y+3][x-3] and board[y][x]!=s):
-                        if(board[y][x]==p1):
-                            board[y][x] = ':large_blue_diamond:'
-                            board[y+1][x-1] = ':large_blue_diamond:'
-                            board[y+2][x-2] = ':large_blue_diamond:'
-                            board[y+3][x-3] = ':large_blue_diamond:'
-                        elif(board[y][x]==p2):
-                            board[y][x]=":diamonds:"
-                            board[y+1][x-1]=":diamonds:"
-                            board[y+2][x-2]=":diamonds:"
-                            board[y+3][x-3]=":diamonds:"
-                        winner = otherPlayer
-                        winningComment = f"{otherPlayer} connected 4 in a / diagonal"
-                        break
-                if(winner!=""):
-                    break    
-            if(winner!=""):
-                break
-            ################################
-            em = discord.Embed()
-            em.title = f'Connect 4'
-            em.description = f"{self.getDisplay()}"
-            em.color = 0x444444
-            em.add_field(name=f"Turn {turns}: {currentPlayer} turn", value=f"Enter a value from 1-{width}. You have 30 seconds to make a choice", inline=True)
-            await boardMessage.edit(embed=em)
-            gotValidInput = False
-            badInput = 0
-            while not gotValidInput:
-                try:
-                    msg = await self.client.wait_for('message',check=lambda message: message.author.name == currentPlayer, timeout=30)
-                    await ctx.channel.delete_messages(await self.getMessages(ctx,1))
-                    slot = int(msg.content)
-                    if(slot<1 or slot>width):
-                        raise ValueError
-                    # Place piece in slot
-                    for y in range(height-1,-1,-1):
-                        if(board[y][slot-1]==s):
-                            if(currentPlayerId == 1):
-                                board[y][slot-1] = p1
-                                break;
-                            else:
-                                board[y][slot-1] = p2
-                                break;
-                        elif(y==0): #if column is full
-                            raise ValueError
-                    # switch player
-                    if(currentPlayerId == 1):
-                        currentPlayer = player1
-                        otherPlayer = player2
-                        currentPlayerId = 2
-                    else:
-                        currentPlayer = player1
-                        otherPlayer = player2
-                        currentPlayerId = 1
-                    gotValidInput=True
-                    turns+=1
-                    break
-                except asyncio.exceptions.TimeoutError:
-                    winner=otherPlayer
-                    winningComment=f"{currentPlayer} took too much time"
-                    gameLoop = False
-                    break
-                except ValueError:
-                    em = discord.Embed()
-                    em.title = f'Connect 4'
-                    em.description = f"{self.getDisplay()}"
-                    em.color = 0x444444
-                    em.add_field(name=f"Turn {turns}: {currentPlayer}", value=f"Enter a valid number from 1-{width}", inline=False)
-                    await boardMessage.edit(embed=em)
-                    badInput+=1
-                if(badInput==3):
-                    winner=otherPlayer
-                    winningComment=f"{currentPlayer} had too many bad inputs"
-                    gameLoop = False
-                    break
-        if(winner==None):
-            em = discord.Embed()
-            em.title = f'Connect 4 - Tie, No Winners'
-            em.description = f"{self.getDisplay()}"
-            em.color = 0x444444
-            await boardMessage.edit(embed=em)
-        elif(winner==player1):
-            em = discord.Embed()
-            em.title = f'Connect 4 - {player1} wins!'
-            em.description = f"{self.getDisplay()}"
-            em.add_field(name="Reason:", value=f"{winningComment}", inline=False)
-            if(player1==player2):
-                em.add_field(name="Also:", value=f"They won against themself", inline=False)
-            em.color = 0x444444
-            await boardMessage.edit(embed=em)
-        elif(winner==player2):
-            em = discord.Embed()
-            em.title = f'Connect 4 - {player2} wins!'
-            em.description = f"{self.getDisplay()}"
-            em.add_field(name="Reason:", value=f"{winningComment}", inline=False)
-            if(player1==player2):
-                em.add_field(name="Also:", value=f"They won against themself", inline=False)
-            em.color = 0x444444
-            await boardMessage.edit(embed=em)
+    
 
     @commands.command(name='chess')
     async def chess(self, ctx: commands.Context,opponent=""):
@@ -1161,106 +1287,196 @@ class Games(commands.Cog):
     async def hangman_error(self, ctx, error):
         await ctx.send(error)
 
-    @commands.command(aliases = ['ttt'])
-    async def tictactoe(self, ctx, *, opponent: discord.Member):
-       
-        if opponent.id == ctx.author.id:
-            await ctx.send("You played yourself. Oh wait, you can't.")
+
+    boards = {}
+
+    def create(self, server_id, player1, player2):
+        self.boards[server_id] = Board(player1, player2)
+
+        # Return whoever is x's so that we know who is going first
+        return self.boards[server_id].challengers["x"]
+
+    @commands.group(aliases=["tic", "tac", "toe", "ttt"], invoke_without_command=True)
+    @commands.guild_only()
+    async def tictactoe(self, ctx, *, option: str=None):
+        em =discord.Embed(title = "Tictactoe!", description = f"Use `{ctx.prefix} help ttt for more info!")
+        em.set_thumbnail(url="https://image.flaticon.com/icons/png/512/566/566294.png")
+
+    @tictactoe.command(name="place", aliases=["plc"])
+    @commands.guild_only()
+    async def place(self, ctx, *, option: str=None):
+        f"""Updates the current server's tic-tac-toe board
+        You obviously need to be one of the players to use this
+        It also needs to be your turn
+        Provide top, left, bottom, right, middle as you want to mark where to play on the board
+        EXAMPLE: rap tictactoe place middle top
+        RESULT: Your piece is placed in the very top space, in the middle"""
+        player = ctx.message.author
+        board = self.boards.get(ctx.message.guild.id)
+        # Need to make sure the board exists before allowing someone to play
+        if not board:
+            await ctx.send("There are currently no Tic-Tac-Toe games setup!")
             return
-        if opponent.bot:
-            await ctx.send("You played a bot. Oh wait, you can't.")
+        # Now just make sure the person can play, this will fail if o's are up and x tries to play
+        # Or if someone else entirely tries to play
+        if not board.can_play(player):
+            await ctx.send("You cannot play right now!")
             return
-        await ctx.send('Tictactoe has started. Type the number of the square you want to go in. Type "end_game" to end the game.')
-        player1 = ctx.author
-        player2 = opponent
 
-        commands = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'end_game']
+        # Search for the positions in the option given, the actual match doesn't matter, just need to check if it exists
+        top = re.search("top", option)
+        middle = re.search("middle", option)
+        bottom = re.search("bottom", option)
+        left = re.search("left", option)
+        right = re.search("right", option)
 
-        def check(m):
-            return m.channel == ctx.channel and (m.content in commands) and not m.author.bot
+        # Just a bit of logic to ensure nothing that doesn't make sense is given
+        if top and bottom:
+            await ctx.send("That is not a valid location! Use some logic, come on!")
+            return
+        if left and right:
+            await ctx.send("That is not a valid location! Use some logic, come on!")
+            return
+        # Make sure at least something was given
+        if not top and not bottom and not left and not right and not middle:
+            await ctx.send("Please provide a valid location to play!")
+            return
 
-        def endgame(board):
-            for k in range(3):
-                if board[k][0] == board[k][1] and board[k][1] == board[k][2]:
-                    if board[k][0] > 0:
-                        return board[k][0]
-                elif board[0][k] == board[1][k] and board[1][k] == board[2][k]:
-                    if board[0][k] > 0:
-                        return board[0][k]
-            if (board[0][0] == board[1][1] and board[1][1] == board[2][2]) or (board[0][2] == board[1][1] and board[1][1] == board[2][0]):
-                if board[1][1] > 0:
-                    return board[1][1]
-            counter = 0
-            for l in range(3):
-                for m in range(3):
-                    if board[l][m] == 0:
-                        counter += 1
-            if counter == 0:
-                return 3
-            else:
-                return 0
+        x = 0
+        y = 0
+        # Simple assignments
+        if top:
+            x = 0
+        if bottom:
+            x = 2
+        if left:
+            y = 0
+        if right:
+            y = 2
+        # If middle was given and nothing else, we need the exact middle
+        if middle and not (top or bottom or left or right):
+            x = 1
+            y = 1
+        # If just top or bottom was given, we assume this means top-middle or bottom-middle
+        # We don't need to do anything fancy with top/bottom as it's already assigned, just assign middle
+        if (top or bottom) and not (left or right):
+            y = 1
+        # If just left or right was given, we assume this means left-middle or right-middle
+        # We don't need to do anything fancy with left/right as it's already assigned, just assign middle
+        elif (left or right) and not (top or bottom):
+            x = 1
 
-        board = [[0] * 3 for n in range(3)]
-        end = False
-        player = 1
-        while not end:
-            out = '```'
-            for i in range(3):
-                for j in range(3):
-                    out += ' '
-                    if board[i][j] == 0:
-                        out += str(i * 3 + j + 1)
-                    elif board[i][j] == 1:
-                        out += 'X'
-                    elif board[i][j] == 2:
-                        out += 'O'
-                    out += ' '
-                    if j != 2:
-                        out += '|'
-                out += '\n'
-                if i != 2:
-                    out += '---+---+---\n'
-            out += '```'
-            await ctx.send(out)
-            result = endgame(board)
-            if result != 0:
-                if result == 1:
-                    await ctx.send(f'{player1.display_name} wins!')
-                    return
-                elif result == 2:
-                    await ctx.send(f'{player2.display_name} wins!')
-                    return
-                else:
-                    await ctx.send('Tie!')
-
-                    return
-            if player == 1:
-                await ctx.send("{0}'s turn".format(player1.display_name))
-            else:
-                await ctx.send("{0}'s turn".format(player2.display_name))
-            valid = False
-            while not valid:
+        # If all checks have been made, x and y should now be defined
+        # Correctly based on the matches, and we can go ahead and update the board
+        # We've already checked if the author can play, so there's no need to make any additional checks here
+        # board.update will handle which letter is placed
+        # If it returns false however, then someone has already played in that spot and nothing was updated
+        if not board.update(x, y):
+            await ctx.send("Someone has already played there!")
+            return
+        # Next check if there's a winner
+        winner = board.check()
+        if winner:
+            # Get the loser based on whether or not the winner is x's
+            # If the winner is x's, the loser is o's...obviously, and vice-versa
+            loser = (
+                board.challengers["x"]
+                if board.challengers["x"] != winner
+                else board.challengers["o"]
+            )
+            await ctx.send(
+                "{} has won this game of TicTacToe, better luck next time {}".format(
+                    winner.display_name, loser.display_name
+                )
+            )
+            # Handle updating ratings based on the winner and loser
+           
+            # This game has ended, delete it so another one can be made
+            try:
+                del self.boards[ctx.message.guild.id]
+            except KeyError:
+                pass
+        else:
+            # If no one has won, make sure the game is not full. If it has, delete the board and say it was a tie
+            if board.full():
+                await ctx.send("This game has ended in a tie!")
                 try:
-                    msg = await self.client.wait_for('message', timeout = 300.0, check = check)
-                except asyncio.TimeoutError:
-                    await ctx.send('Game timed out.')
-                    return
-                if (player == 1 and msg.author == player1) or (player == 2 and msg.author == player2):
-                    if msg.content == 'end_game':
-                        await ctx.send('Game ended.')
-                        return
-                    input = int(msg.content)
-                    a = int((input - 1) / 3)
-                    b = int((input - 1) % 3)
-                    if board[a][b] == 0:
-                        board[a][b] = player
-                        player = 3 - player
-                        valid = True
-	
-    @tictactoe.error
-    async def tictactoe_error(self, ctx, error):
-        print(error)
-        await ctx.send('Please follow format: `rap tictactoe {opponent}`')
+                    del self.boards[ctx.message.guild.id]
+                except KeyError:
+                    pass
+            # If no one has won, and the game has not ended in a tie, print the new updated board
+            else:
+                player_turn = (
+                    board.challengers.get("x")
+                    if board.X_turn
+                    else board.challengers.get("o")
+                )
+                fmt = str(board) + "\n{} It is now your turn to play!".format(
+                    player_turn.display_name
+                )
+                await ctx.send(fmt)
+
+    @tictactoe.command(name="start", aliases=["challenge", "create"])
+    @commands.guild_only()
+    async def start_game(self, ctx, player2: discord.Member):
+        f"""Starts a game of tictactoe with another player
+        EXAMPLE: rap tictactoe start @OtherPerson
+        RESULT: A new game of tictactoe"""
+        player1 = ctx.message.author
+        # For simplicities sake, only allow one game on a server at a time.
+        # Things can easily get confusing (on the server's end) if we allow more than one
+        if self.boards.get(ctx.message.guild.id) is not None:
+            await ctx.send(
+                "Sorry but only one Tic-Tac-Toe game can be running per server!"
+            )
+            return
+        # Make sure we're not being challenged, I always win anyway
+        if player2 == ctx.message.guild.me:
+            await ctx.send(
+                "You want to play? Alright lets play.\n\nI win, so quick you didn't even notice it."
+            )
+            return
+        if player2 == player1:
+            await ctx.send(
+                "You can't play yourself, I won't allow it. Go find some friends"
+            )
+            return
+
+        # Create the board and return who has been decided to go first
+        x_player = self.create(ctx.message.guild.id, player1, player2)
+        fmt = "A tictactoe game has just started between {} and {}\n".format(
+            player1.display_name, player2.display_name
+        )
+        # Print the board too just because
+        fmt += str(self.boards[ctx.message.guild.id])
+
+        # We don't need to do anything weird with assigning x_player to something
+        # it is already a member object, just use it
+        fmt += (
+            "I have decided at random, and {} is going to be x's this game. It is your turn first! "
+            "Use the {}tictactoe command, and a position, to choose where you want to play".format(
+                x_player.display_name, ctx.prefix
+            )
+        )
+        await ctx.send(fmt)
+
+    @tictactoe.command(name="delete", aliases=["stop", "remove", "end"])
+    @commands.guild_only()
+    async def stop_game(self, ctx):
+        f"""Force stops a game of tictactoe
+        This should realistically only be used in a situation like one player leaves
+        Hopefully a moderator will not abuse it, but there's not much we can do to avoid that
+        EXAMPLE: rap tictactoe stop
+        RESULT: No more tictactoe!"""
+        if self.boards.get(ctx.message.guild.id) is None:
+            await ctx.send("There are no tictactoe games running on this server!")
+            return
+
+        del self.boards[ctx.message.guild.id]
+        await ctx.send(
+            "I have just stopped the game of TicTacToe, a new should be able to be started now!"
+        )
+
 
     @commands.command(aliases = ['2048', 'twenty48'])
     @commands.max_concurrency(1, commands.BucketType.channel, wait = False)
@@ -1466,6 +1682,7 @@ class Games(commands.Cog):
         async for x in ctx.channel.history(limit = number):
             toDelete.append(x)
         return(toDelete)
+
 
 
 	
