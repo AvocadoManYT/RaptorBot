@@ -48,6 +48,118 @@ class Economy(commands.Cog):
             except asyncio.TimeoutError:
                 await ctx.send("You failed in typing the word in time so you get nothing.")
 
+        num = random.randint(1, 10)
+        if num == 5:
+            r = open("txt/words.txt", "r")
+            sd = r.readlines()
+            fword = random.choice(sd)
+            em = discord.Embed(title = "Super Common Event!", description = f"Type the word `{fword}` into the chat to get a prize!", color = msg.author.color)
+            nearn = random.randint(500, 1000)
+            em.set_footer(text="Hurry, becuase you only have 10 seconds to answer!")
+            await msg.channel.send(embed = em)
+            def check(m):
+                return m.author == msg.author and m.channel == msg.channel
+            try:
+                mess = await self.client.wait_for("message", check=check, timeout = 10)
+                if mess.content == fword.strip():
+                    await msg.channel.send(f"Good job in typing the word. You earned `△ {nearn}`!")
+                    await self.update_bank(ctx.author, nearn)
+                if not mess.content == fword.strip():
+                    await ctx.send("You failed in typing the word correctly so you get nothing.")
+
+            except asyncio.TimeoutError:
+                await ctx.send("You failed in typing the word in time so you get nothing.")
+
+
+        numb = random.randint(1, 40)
+        if numb == 20:
+            r = open("txt/words.txt", "r")
+            afs = r.readlines()
+            word = random.choice(afs)
+            em = discord.Embed(title = "Uncommon Event!", description = f"Type the word `{word}` into the chat to get a prize!", color = msg.author.color)
+            mearn = random.randint(3000, 5000)
+            em.set_footer(text="Hurry, becuase you only have 10 seconds to answer!")
+            await msg.channel.send(embed = em)
+            def check(m):
+                return m.author == msg.author and m.channel == msg.channel
+            try:
+                mess = await self.client.wait_for("message", check=check, timeout = 10)
+                if mess.content == word.strip():
+                    await msg.channel.send(f"Good job in typing the word. You earned `△ {mearn}`!")
+                    await self.update_bank(ctx.author, mearn)
+                if not mess.content == word.strip():
+                    await ctx.send("You failed in typing the word correctly so you get nothing.")
+
+            except asyncio.TimeoutError:
+                await ctx.send("You failed in typing the word in time so you get nothing.")
+
+        um = random.randint(1, 80)
+        if um == 40:
+            s = open("txt/words.txt", "r")
+            asdf = s.readlines()
+            rwords = random.choice(asdf)
+            em = discord.Embed(title = "Rare Event!", description = f"Type the word `{rwords}` into the chat to get a prize!", color = msg.author.color)
+            rearn = random.randint(5000, 7000)
+            em.set_footer(text="Hurry, becuase you only have 10 seconds to answer!")
+            await msg.channel.send(embed = em)
+            def check(m):
+                return m.author == msg.author and m.channel == msg.channel
+            try:
+                mess = await self.client.wait_for("message", check=check, timeout = 10)
+                if mess.content == rwords.strip():
+                    await msg.channel.send(f"Good job in typing the word. You earned `△ {rearn}`!")
+                    await self.update_bank(ctx.author, rearn)
+                if not mess.content == rwords.strip():
+                    await ctx.send("You failed in typing the word correctly so you get nothing.")
+
+            except asyncio.TimeoutError:
+                await ctx.send("You failed in typing the word in time so you get nothing.")
+
+
+        nubm = random.randint(1, 160)
+        if nubm == 80:
+            e = open("txt/words.txt", "r")
+            asfd = e.readlines()
+            rworsd = random.choice(asfd)
+            em = discord.Embed(title = "Super Rare Event!", description = f"Type the word `{rworsd}` into the chat to get a prize!", color = msg.author.color)
+            fearn = random.randint(7000, 9000)
+            em.set_footer(text="Hurry, becuase you only have 10 seconds to answer!")
+            await msg.channel.send(embed = em)
+            def check(m):
+                return m.author == msg.author and m.channel == msg.channel
+            try:
+                mess = await self.client.wait_for("message", check=check, timeout = 10)
+                if mess.content == rworsd.strip():
+                    await msg.channel.send(f"Good job in typing the word. You earned `△ {fearn}`!")
+                    await self.update_bank(ctx.author, fearn)
+                if not mess.content == rworsd.strip():
+                    await ctx.send("You failed in typing the word correctly so you get nothing.")
+
+            except asyncio.TimeoutError:
+                await ctx.send("You failed in typing the word in time so you get nothing.")
+
+        num = random.randint(1, 320)
+        if num == 160:
+            g = open("txt/words.txt", "r")
+            asgd = g.readlines()
+            gword = random.choice(asgd)
+            em = discord.Embed(title = "Legendary Event!", description = f"Type the word `{gword}` into the chat to get a prize!", color = msg.author.color)
+            gearn = random.randint(9000, 11000)
+            em.set_footer(text="Hurry, becuase you only have 10 seconds to answer!")
+            await msg.channel.send(embed = em)
+            def check(m):
+                return m.author == msg.author and m.channel == msg.channel
+            try:
+                mess = await self.client.wait_for("message", check=check, timeout = 10)
+                if mess.content == gword.strip():
+                    await msg.channel.send(f"Good job in typing the word. You earned `△ {gearn}`!")
+                    await self.update_bank(ctx.author, gearn)
+                if not mess.content == gword.strip():
+                    await ctx.send("You failed in typing the word correctly so you get nothing.")
+
+            except asyncio.TimeoutError:
+                await ctx.send("You failed in typing the word in time so you get nothing.")
+
 
 
     

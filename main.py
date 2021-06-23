@@ -2,14 +2,13 @@ import sr_api
 import discord
 import random
 import os
-import aiosqlite
-import json
 import asyncio
 import datetime
 import aiofiles
 from discord.ext import commands
 from prsaw import RandomStuff
 import ka as ka
+from better_help import Help
 
 restart_reason = "removed customizable prefixes again!"
 owners = [801234598334955530, 814226043924643880]
@@ -18,12 +17,11 @@ owners = [801234598334955530, 814226043924643880]
 
 prefix = "rap "
 rs = RandomStuff(async_mode = True)
-client = commands.Bot(command_prefix = prefix, intents=discord.Intents.all(), allowed_mentions=discord.AllowedMentions(roles=False, everyone=False), case_insensitive=True, owner_ids=owners)
+client = commands.Bot(command_prefix = prefix, intents=discord.Intents.all(), allowed_mentions=discord.AllowedMentions(everyone=False), case_insensitive=True, owner_ids=owners, help_command=Help())
 client.sr_api = sr_api.Client()
 client.launch_time = datetime.datetime.utcnow()
 client.warnings = {}
 bot = client
-client.bldb = aiosqlite.connect("db/bl.sqlite")
 smoother = True
 client.reaction_roles = []
 client.load_extension('jishaku')
@@ -154,15 +152,6 @@ num = random.randint(1, 10)
 async def on_ready():
     await client.bldb
 
-    cursor = await client.bldb.cursor()
-
-    await cursor.execute("""
-      CREATE TABLE IF NOT EXISTS blacklist(
-        guild_id INTEGER,
-        user_id INTEGER,
-        blacklisted BOOL
-      )""")
-    await client.bldb.commit()
     channel = client.get_channel(855129871650127957)
     embed = discord.Embed(
     title = "Online!",

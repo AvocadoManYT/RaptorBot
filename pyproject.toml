@@ -1,8 +1,8 @@
 [tool.poetry]
-name = "raptorcodeswastic"
-version = "0.1.0"
-description = ""
-authors = ["Your Name <you@example.com>"]
+name = "RaptorBot"
+version = "1.0.0"
+description = "An amazing bot with an economy system, moderation, music, utility commands and so much more!"
+authors = ["AvocadoManYT <https://youtube.com/AvocadoMan>"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
@@ -33,7 +33,7 @@ discord-ext-games = "^1.1.5"
 parsedatetime = "^2.6"
 aiosqlite = "^0.17.0"
 googlesearch-python = "^1.0.1"
-googletrans2 = "^2.3.0"
+discord-better-help = "^1.2.0"
 
 [tool.poetry.dev-dependencies]
 

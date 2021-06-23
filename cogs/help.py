@@ -1,5 +1,4 @@
 import discord
-import json
 from discord.ext import commands
 
 
@@ -24,6 +23,7 @@ class MyHelpCommand(commands.HelpCommand):
                     cogs.append(cog)
 
         embed = discord.Embed(
+            title = f"Help For {ctx.guild.name}",
             color=discord.Color.blurple(),
             timestamp=ctx.message.created_at,
             description=f"Use `{self.clean_prefix}help <category>` to get help on a category\nUse `{self.clean_prefix}help <command>` to get help on a command\n",
@@ -42,13 +42,13 @@ class MyHelpCommand(commands.HelpCommand):
             if len(cog_commands) > 0:
                 cog_help = cog.description or "No description provided"
                 cog_help += "\n"
-
+                
                 embed.add_field(name=cog.qualified_name, value=cog_help)
         
         embed.add_field(name = "Feedback & Suggestions", value="Use `rap suggest` or `rap feedback` to send feedback and suggestions to the support server!")
 
         embed.set_thumbnail(url = ctx.guild.icon_url)
-        embed.set_author(name = "Help", icon_url = ctx.bot.user.avatar_url)
+        embed.set_author(name = ctx.author.display_name, icon_url = ctx.author.avatar_url)
 
         await ctx.send(embed=embed)
 
